@@ -1,0 +1,47 @@
+# MALINFO Logrotate Configuration
+# Install: sudo cp /opt/malinfo/deploy/logrotate/malinfo /etc/logrotate.d/malinfo
+# Test: sudo logrotate -d /etc/logrotate.d/malinfo
+
+/var/log/malinfo/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 0640 malinfo malinfo
+    sharedscripts
+    postrotate
+        systemctl reload malinfo-backend malinfo-icap malinfo-monitor > /dev/null 2>&1 || true
+    endscript
+}
+
+# Systemd journal is handled by journald.conf, but if using file logging:
+/opt/malinfo/logs/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 0640 malinfo malinfo
+    sharedscripts
+    postrotate
+        systemctl reload malinfo-backend malinfo-icap malinfo-monitor > /dev/null 2>&1 || true
+    endscript
+}
+
+# Nginx logs (if running nginx directly, not in container)
+/var/log/nginx/malinfo-*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 0640 www-data www-data
+    sharedscripts
+    postrotate
+        systemctl reload nginx > /dev/null 2>&1 || true
+    endscript
+}

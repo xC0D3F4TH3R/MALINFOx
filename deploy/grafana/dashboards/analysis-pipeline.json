@@ -1,0 +1,84 @@
+{
+  "dashboard": {
+    "title": "MALINFO - Analysis Pipeline",
+    "tags": ["malinfo", "analysis"],
+    "timezone": "utc",
+    "refresh": "30s",
+    "time": {"from": "now-6h", "to": "now"},
+    "panels": [
+      {
+        "id": 1,
+        "title": "Static Analysis Queue Depth",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 6},
+        "targets": [{"expr": "malinfo_analysis_queue_depth", "legendFormat": "Queue Depth"}]
+      },
+      {
+        "id": 2,
+        "title": "Analysis Duration (avg)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 6},
+        "targets": [{"expr": "malinfo:analysis_avg_duration_seconds", "legendFormat": "Avg Duration (s)"}]
+      },
+      {
+        "id": 3,
+        "title": "Analysis Results by Verdict",
+        "type": "piechart",
+        "gridPos": {"x": 0, "y": 6, "w": 8, "h": 8},
+        "targets": [
+          {"expr": "sum(rate(malinfo_analysis_completed_total{verdict=\"malicious\"}[5m]))", "legendFormat": "Malicious"},
+          {"expr": "sum(rate(malinfo_analysis_completed_total{verdict=\"suspicious\"}[5m]))", "legendFormat": "Suspicious"},
+          {"expr": "sum(rate(malinfo_analysis_completed_total{verdict=\"clean\"}[5m]))", "legendFormat": "Clean"},
+          {"expr": "sum(rate(malinfo_analysis_completed_total{verdict=\"unknown\"}[5m]))", "legendFormat": "Unknown"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Analysis Failure Rate",
+        "type": "graph",
+        "gridPos": {"x": 8, "y": 6, "w": 8, "h": 8},
+        "targets": [
+          {"expr": "sum(rate(malinfo_analysis_failures_total[5m])) / sum(rate(malinfo_analysis_total[5m]))", "legendFormat": "Failure Rate"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percentunit", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.05}, {"color": "red", "value": 0.1}]}}}
+      },
+      {
+        "id": 5,
+        "title": "YARA Matches per Sample",
+        "type": "graph",
+        "gridPos": {"x": 16, "y": 6, "w": 8, "h": 8},
+        "targets": [
+          {"expr": "rate(malinfo_yara_matches_total[5m])", "legendFormat": "Matches/min"},
+          {"expr": "rate(malinfo_yara_rules_triggered_total[5m])", "legendFormat": "Rules Triggered/min"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Sandbox Tasks",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 14, "w": 12, "h": 6},
+        "targets": [
+          {"expr": "rate(malinfo_sandbox_submitted_total[5m])", "legendFormat": "Submitted/min"},
+          {"expr": "rate(malinfo_sandbox_completed_total[5m])", "legendFormat": "Completed/min"},
+          {"expr": "rate(malinfo_sandbox_failed_total[5m])", "legendFormat": "Failed/min"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Sandbox MalScore Distribution",
+        "type": "heatmap",
+        "gridPos": {"x": 12, "y": 14, "w": 12, "h": 6},
+        "targets": [{"expr": "malinfo_sandbox_malscore_bucket", "format": "heatmap"}]
+      },
+      {
+        "id": 8,
+        "title": "Top MITRE Techniques",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 20, "w": 24, "h": 8},
+        "targets": [{"expr": "topk(20, sum by (technique) (rate(malinfo_mitre_technique_detected_total[1h])))", "format": "table"}]
+      }
+    ],
+    "schemaVersion": 38,
+    "version": 1
+  }
+}

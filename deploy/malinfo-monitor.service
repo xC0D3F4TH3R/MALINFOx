@@ -1,0 +1,77 @@
+# MALINFO File Monitor Systemd Service — Production Hardened
+# For running file transfer monitoring on bare metal or VMs
+# Install: sudo cp /opt/malinfo/deploy/malinfo-monitor.service /etc/systemd/system/
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable --now malinfo-monitor
+
+[Unit]
+Description=MALINFO File Transfer Monitor — Real-time Analysis
+Documentation=https://malinfo.example.gov/docs
+After=network.target postgresql.service redis.service malinfo-backend.service
+Wants=postgresql.service redis.service malinfo-backend.service
+
+[Service]
+Type=notify
+User=malinfo
+Group=malinfo
+WorkingDirectory=/opt/malinfo/backend
+EnvironmentFile=/opt/malinfo/.env
+Environment=PATH=/opt/malinfo/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=MALINFO_ENV=production
+Environment=MONITOR_ENABLED=true
+ExecStartPre=/bin/bash -c 'mkdir -p /opt/malinfo/storage/uploads /opt/malinfo/storage/reports /opt/malinfo/storage/pcaps && chown -R malinfo:malinfo /opt/malinfo/storage'
+ExecStart=/opt/malinfo/venv/bin/python -m app.monitoring.transfer_monitor
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=60
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Filesystem monitoring requires DAC_READ_SEARCH for watching directories
+AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_RESOURCE
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_RESOURCE
+
+# Filesystem access — needs read access to monitored paths
+ReadWritePaths=/opt/malinfo/storage
+ReadOnlyPaths=/opt/malinfo/backend /opt/malinfo/.env /var/mail /home /tmp
+InaccessiblePaths=/root /home/*/.ssh /etc/shadow /etc/gshadow
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=100%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=malinfo-monitor
+LogLevelMax=info
+
+[Install]
+WantedBy=multi-user.target

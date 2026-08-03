@@ -1,0 +1,292 @@
+groups:
+  - name: malinfo.rules
+    interval: 30s
+    rules:
+      # --- Service Availability ---
+      - alert: MalinfoBackendDown
+        expr: up{job="malinfo-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "MALINFO Backend is down"
+          description: "Backend API has been down for more than 1 minute"
+          runbook_url: "https://docs.malinfo.example.gov/runbooks/backend-down"
+
+      - alert: MalinfoNginxDown
+        expr: up{job="malinfo-nginx"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: frontend
+        annotations:
+          summary: "MALINFO Nginx is down"
+          description: "Frontend proxy has been down for more than 1 minute"
+
+      - alert: MalinfoDatabaseDown
+        expr: up{job="malinfo-postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "MALINFO PostgreSQL is down"
+          description: "Database has been down for more than 1 minute"
+
+      - alert: MalinfoRedisDown
+        expr: up{job="malinfo-redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "MALINFO Redis is down"
+          description: "Redis cache has been down for more than 1 minute"
+
+      # --- API Health ---
+      - alert: MalinfoHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="malinfo-backend",status=~"5.."}[5m])) 
+          / 
+          sum(rate(http_requests_total{job="malinfo-backend"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "High API error rate (>5%)"
+          description: "Backend API error rate is {{ $value | humanizePercentage }} over 5 minutes"
+
+      - alert: MalinfoHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="malinfo-backend"}[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "High API latency (p95 > 5s)"
+          description: "Backend API p95 latency is {{ $value }}s"
+
+      # --- Analysis Pipeline ---
+      - alert: MalinfoAnalysisQueueBacklog
+        expr: malinfo_analysis_queue_depth > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: analysis
+        annotations:
+          summary: "Analysis queue backlog ({{ $value }} samples)"
+          description: "Static analysis queue has {{ $value }} pending samples"
+
+      - alert: MalinfoAnalysisFailureRate
+        expr: |
+          sum(rate(malinfo_analysis_failures_total[15m])) 
+          / 
+          sum(rate(malinfo_analysis_total[15m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: analysis
+        annotations:
+          summary: "High analysis failure rate (>10%)"
+          description: "{{ $value | humanizePercentage }} of analyses failed in last 15 minutes"
+
+      - alert: MalinfoSandboxUnavailable
+        expr: malinfo_sandbox_available == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: sandbox
+        annotations:
+          summary: "CAPEv2 sandbox unavailable"
+          description: "Sandbox controller not responding or no available VMs"
+
+      - alert: MalinfoSandboxTimeout
+        expr: malinfo_sandbox_task_duration_seconds > 1800
+        for: 0m
+        labels:
+          severity: warning
+          component: sandbox
+        annotations:
+          summary: "Sandbox task timeout"
+          description: "Sandbox task running for more than 30 minutes"
+
+      # --- Resource Utilization ---
+      - alert: MalinfoHighMemoryUsage
+        expr: |
+          (container_memory_usage_bytes{job="malinfo-backend"} / container_spec_memory_limit_bytes{job="malinfo-backend"}) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "Backend memory usage > 85%"
+          description: "Backend container using {{ $value | humanizePercentage }} of memory limit"
+
+      - alert: MalinfoHighCPUUsage
+        expr: |
+          (rate(container_cpu_usage_seconds_total{job="malinfo-backend"}[5m]) * 100) > 80
+        for: 15m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "Backend CPU usage > 80%"
+          description: "Backend container CPU usage at {{ $value }}%"
+
+      - alert: MalinfoDiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/opt/malinfo/storage"} / node_filesystem_size_bytes{mountpoint="/opt/malinfo/storage"}) < 0.15
+        for: 5m
+        labels:
+          severity: critical
+          component: storage
+        annotations:
+          summary: "Storage disk space < 15%"
+          description: "Only {{ $value | humanizePercentage }} of storage space remaining"
+
+      - alert: MalinfoDatabaseConnectionsHigh
+        expr: |
+          pg_stat_database_numbackends{datname="malinfo"} / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database connections > 80% of max"
+          description: "{{ $value | humanizePercentage }} of max connections in use"
+
+      # --- Monitoring Services ---
+      - alert: MalinfoICAPDown
+        expr: up{job="malinfo-icap"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: icap
+        annotations:
+          summary: "ICAP gateway down"
+          description: "ICAP gateway service not responding"
+
+      - alert: MalinfoMonitorDown
+        expr: up{job="malinfo-monitor"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: monitor
+        annotations:
+          summary: "File monitor down"
+          description: "Real-time file monitoring service not responding"
+
+      - alert: MalinfoTransferAlertsHigh
+        expr: rate(malinfo_transfer_alerts_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: info
+          component: monitor
+        annotations:
+          summary: "High file transfer alert rate"
+          description: "{{ $value }} transfer alerts per second"
+
+      # --- Threat Intelligence ---
+      - alert: MalinfoThreatIntelSyncFailure
+        expr: malinfo_threat_intel_last_sync_status != "success"
+        for: 1h
+        labels:
+          severity: warning
+          component: threat_intel
+        annotations:
+          summary: "Threat intel feed sync failing"
+          description: "Feed {{ $labels.feed }} last sync status: {{ $value }}"
+
+      - alert: MalinfoThreatIntelStale
+        expr: time() - malinfo_threat_intel_last_sync_timestamp > 86400
+        for: 0m
+        labels:
+          severity: info
+          component: threat_intel
+        annotations:
+          summary: "Threat intel feed stale (>24h)"
+          description: "Feed {{ $labels.feed }} not synced in 24 hours"
+
+      # --- Security ---
+      - alert: MalinfoAuthFailuresHigh
+        expr: rate(malinfo_auth_failures_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} failed login attempts per second"
+
+      - alert: MalinfoAccountLockouts
+        expr: increase(malinfo_account_lockouts_total[15m]) > 5
+        for: 0m
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: "Multiple account lockouts"
+          description: "{{ $value }} accounts locked in 15 minutes"
+
+      # --- Certificate Expiry ---
+      - alert: MalinfoTLSCertExpiringSoon
+        expr: |
+          (ssl_certificate_not_after_timestamp - time()) < 2592000
+        for: 1h
+        labels:
+          severity: warning
+          component: tls
+        annotations:
+          summary: "TLS certificate expiring in < 30 days"
+          description: "Certificate for {{ $labels.domain }} expires in {{ $value | humanizeDuration }}"
+
+      - alert: MalinfoTLSCertExpired
+        expr: |
+          ssl_certificate_not_after_timestamp < time()
+        for: 0m
+        labels:
+          severity: critical
+          component: tls
+        annotations:
+          summary: "TLS certificate EXPIRED"
+          description: "Certificate for {{ $labels.domain }} has expired!"
+
+  # --- Recording Rules for Dashboards ---
+  - name: malinfo.recording
+    interval: 30s
+    rules:
+      - record: malinfo:analysis_throughput_per_minute
+        expr: sum(rate(malinfo_analysis_completed_total[5m])) * 60
+
+      - record: malinfo:analysis_avg_duration_seconds
+        expr: rate(malinfo_analysis_duration_seconds_sum[5m]) / rate(malinfo_analysis_duration_seconds_count[5m])
+
+      - record: malinfo:sandbox_throughput_per_hour
+        expr: sum(rate(malinfo_sandbox_completed_total[15m])) * 3600
+
+      - record: malinfo:sandbox_avg_malscore
+        expr: rate(malinfo_sandbox_malscore_sum[15m]) / rate(malinfo_sandbox_malscore_count[15m])
+
+      - record: malinfo:api_request_rate
+        expr: sum(rate(http_requests_total{job="malinfo-backend"}[5m]))
+
+      - record: malinfo:api_error_rate
+        expr: sum(rate(http_requests_total{job="malinfo-backend",status=~"5.."}[5m])) / sum(rate(http_requests_total{job="malinfo-backend"}[5m]))
+
+      - record: malinfo:api_p95_latency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="malinfo-backend"}[5m])) by (le))
+
+      - record: malinfo:storage_usage_percent
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/opt/malinfo/storage"} / node_filesystem_size_bytes{mountpoint="/opt/malinfo/storage"})) * 100
+
+      - record: malinfo:db_connections_percent
+        expr: (pg_stat_database_numbackends{datname="malinfo"} / pg_settings_max_connections) * 100
+
+      - record: malinfo:memory_usage_percent
+        expr: (container_memory_usage_bytes{job="malinfo-backend"} / container_spec_memory_limit_bytes{job="malinfo-backend"}) * 100
+
+      - record: malinfo:cpu_usage_percent
+        expr: (rate(container_cpu_usage_seconds_total{job="malinfo-backend"}[5m]) * 100)

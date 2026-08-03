@@ -1,0 +1,425 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: malinfo
+  labels:
+    app.kubernetes.io/name: malinfo
+    app.kubernetes.io/part-of: malinfo-platform
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: malinfo-secrets
+  namespace: malinfo
+type: Opaque
+stringData:
+  # Fill these in with actual values before applying
+  POSTGRES_PASSWORD: "CHANGE_ME"
+  SECRET_KEY: "CHANGE_ME_USE_A_REAL_SECRET_KEY_32_CHARS_MIN"
+  VIRUSTOTAL_API_KEY: ""
+  OTX_API_KEY: ""
+  ABUSEIPDB_API_KEY: ""
+  MISP_API_KEY: ""
+  GRAFANA_PASSWORD: "CHANGE_ME"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: malinfo-config
+  namespace: malinfo
+data:
+  APP_NAME: "MALINFO"
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  API_PREFIX: "/api"
+  MAX_UPLOAD_SIZE_MB: "250"
+  SANDBOX_ENABLED: "false"
+  SANDBOX_API_URL: "http://cape-controller.internal:8000"
+  SANDBOX_POLL_INTERVAL_SEC: "15"
+  SANDBOX_TIMEOUT_SEC: "600"
+  ICAP_ENABLED: "false"
+  ICAP_LISTEN_PORT: "1344"
+  MONITOR_ENABLED: "false"
+  MONITOR_NETWORK_ENABLED: "false"
+  MONITOR_NETWORK_INTERFACE: "any"
+  MONITOR_AUTO_ANALYZE: "true"
+  WS_ENABLED: "true"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "480"
+  REFRESH_TOKEN_EXPIRE_DAYS: "30"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+  ALLOWED_ORIGINS: '["https://malinfo.example.gov"]'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: malinfo-backend
+  namespace: malinfo
+  labels:
+    app: malinfo-backend
+    app.kubernetes.io/name: malinfo
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: malinfo-backend
+  template:
+    metadata:
+      labels:
+        app: malinfo-backend
+        app.kubernetes.io/name: malinfo
+        app.kubernetes.io/component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: malinfo
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: backend
+          image: malinfo/backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: malinfo-config
+            - secretRef:
+                name: malinfo-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://malinfo:$(POSTGRES_PASSWORD)@malinfo-postgres:5432/malinfo"
+            - name: REDIS_URL
+              value: "redis://malinfo-redis:6379/0"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1000m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: storage
+              mountPath: /app/storage
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: malinfo-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: malinfo-backend
+  namespace: malinfo
+  labels:
+    app: malinfo-backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app: malinfo-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: malinfo-nginx
+  namespace: malinfo
+  labels:
+    app: malinfo-nginx
+    app.kubernetes.io/name: malinfo
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: malinfo-nginx
+  template:
+    metadata:
+      labels:
+        app: malinfo-nginx
+        app.kubernetes.io/name: malinfo
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: nginx
+          image: malinfo/nginx:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 443
+              name: https
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+            - name: certs
+              mountPath: /etc/nginx/certs
+              readOnly: true
+            - name: frontend
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: malinfo-nginx-config
+        - name: certs
+          secret:
+            secretName: malinfo-tls
+        - name: frontend
+          configMap:
+            name: malinfo-frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: malinfo-nginx
+  namespace: malinfo
+  labels:
+    app: malinfo-nginx
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
+  selector:
+    app: malinfo-nginx
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: malinfo-nginx-config
+  namespace: malinfo
+data:
+  nginx.conf: |
+    # This would be the content from deploy/nginx.prod.conf
+    # For brevity, using a placeholder - apply the actual config via kubectl create configmap
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+        access_log /var/log/nginx/access.log main;
+        
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_types text/plain text/css text/xml text/javascript application/javascript application/json;
+        
+        upstream backend {
+            least_conn;
+            server malinfo-backend:8000 max_fails=3 fail_timeout=30s;
+            keepalive 32;
+        }
+        
+        limit_req_zone $binary_remote_addr zone=api:10m rate=100r/s;
+        limit_req_zone $binary_remote_addr zone=public_report:10m rate=5r/m;
+        limit_req_zone $binary_remote_addr zone=upload:10m rate=10r/m;
+        limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+        
+        server {
+            listen 80;
+            server_name _;
+            return 301 https://$host$request_uri;
+        }
+        
+        server {
+            listen 443 ssl http2;
+            server_name _;
+            
+            ssl_certificate /etc/nginx/certs/fullchain.pem;
+            ssl_certificate_key /etc/nginx/certs/privkey.pem;
+            
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+            ssl_prefer_server_ciphers off;
+            ssl_session_cache shared:SSL:10m;
+            ssl_session_timeout 10m;
+            
+            add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+            add_header X-Frame-Options "DENY" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            
+            client_max_body_size 260M;
+            
+            root /usr/share/nginx/html;
+            index index.html;
+            
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+            
+            location /api/ {
+                limit_req zone=api burst=20 nodelay;
+                
+                location /api/public/report/ {
+                    limit_req zone=public_report burst=3 nodelay;
+                }
+                
+                location /api/upload {
+                    limit_req zone=upload burst=5 nodelay;
+                }
+                
+                location /api/auth/login {
+                    limit_req zone=login burst=3 nodelay;
+                }
+                
+                proxy_pass http://backend;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 300s;
+                proxy_read_timeout 300s;
+            }
+            
+            location /reports-static/ {
+                proxy_pass http://backend;
+                expires 1h;
+            }
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: malinfo-frontend
+  namespace: malinfo
+data:
+  # Frontend files would be populated here via build process
+  # This is a placeholder - in reality, use an initContainer or build the frontend into the nginx image
+  index.html: |
+    <html><body>MALINFO Frontend - Build required</body></html>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: malinfo-tls
+  namespace: malinfo
+type: kubernetes.io/tls
+data:
+  # Fill in with base64 encoded cert/key
+  # tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==
+  # tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg==
+  tls.crt: ""
+  tls.key: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: malinfo-storage
+  namespace: malinfo
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: nfs-client
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ServiceAccount
+metadata:
+  name: malinfo
+  namespace: malinfo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: malinfo
+  namespace: malinfo
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: malinfo
+  namespace: malinfo
+subjects:
+  - kind: ServiceAccount
+    name: malinfo
+    namespace: malinfo
+roleRef:
+  kind: Role
+  name: malinfo
+  apiGroup: rbac.authorization.k8s.io

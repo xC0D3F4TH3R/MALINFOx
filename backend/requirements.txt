@@ -1,0 +1,57 @@
+##############################################################################
+# MALINFO Backend Requirements
+# Install with: pip install -r requirements.txt --break-system-packages
+##############################################################################
+
+# --- Web framework -----------------------------------------------------
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# --- Database -----------------------------------------------------------
+sqlalchemy==2.0.35
+aiosqlite==0.20.0          # swap for asyncpg + PostgreSQL in production
+asyncpg==0.31.0            # PostgreSQL async driver
+
+# --- Static analysis -------------------------------------------------------
+python-magic==0.4.27       # requires libmagic (apt-get install libmagic1)
+pefile==2024.8.26          # Windows PE parsing
+pyelftools==0.31           # Linux ELF parsing
+macholib==1.16.3           # macOS Mach-O parsing
+yara-python==4.5.1         # YARA rule scanning
+ssdeep==3.4; platform_system != "Windows"  # fuzzy hashing (requires libfuzzy-dev on Linux/Docker)
+androguard==3.3.5          # Android APK analysis
+
+# --- Network forensics -----------------------------------------------------
+scapy==2.6.0                # PCAP parsing / packet crafting
+dnspython==2.6.1
+
+# --- Threat intel enrichment (optional, needs API keys) -------------------
+requests==2.32.3
+aiohttp==3.9.5             # Async HTTP for threat intel providers
+
+# --- Reporting ---------------------------------------------------------
+jinja2==3.1.4
+weasyprint==62.3            # HTML -> PDF report export
+
+# --- Authentication & Security -------------------------------------------
+python-jose[cryptography]==3.3.0   # JWT tokens
+passlib[bcrypt]==1.7.4            # Password hashing
+pyotp==2.9.0                      # TOTP for MFA
+qrcode==7.4.2                     # QR code generation for MFA
+pillow==10.4.0                    # Image processing for QR codes
+python-multipart==0.0.9           # Form data parsing
+
+# --- Monitoring & Filesystem ---------------------------------------------
+watchdog==4.0.1              # Filesystem event monitoring
+psutil==5.9.8                # Process/system monitoring
+
+# --- Utilities -----------------------------------------------------------
+python-dotenv==1.0.1
+tenacity==9.0.0             # retry logic for sandbox polling
+email-validator==2.1.0      # Email validation for user registration
+
+# --- Observability -------------------------------------------------------
+prometheus-client==0.19.0   # Prometheus metrics

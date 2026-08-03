@@ -1,0 +1,398 @@
+{# MALINFO - Technical Deep-Dive Report Template #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MALINFO Technical Report - {{ sample.original_filename }}</title>
+<style>
+{{ css_style }}
+</style>
+</head>
+<body>
+<div class="report-container">
+    <!-- Header -->
+    <header class="report-header">
+        <div class="header-left">
+            <div class="brand-mark">MI</div>
+            <div>
+                <h1>MALINFO Technical Analysis Report</h1>
+                <div class="report-meta">Deep-Dive Technical Analysis</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="verdict-badge verdict-{{ sample.verdict|lower }}">
+                {{ sample.verdict|upper }}
+            </div>
+            <div class="risk-score">Risk Score: {{ "%.1f"|format(sample.risk_score) }}/100</div>
+        </div>
+    </header>
+
+    <div class="classification-bar">
+        <span class="tlp tlp-{{ report.tlp|lower }}">TLP:{{ report.tlp|upper }}</span>
+        <span class="report-id">Report ID: {{ report.report_id }}</span>
+        <span class="timestamp">Generated: {{ report.generated_at }}</span>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="report-tabs">
+        <button class="tab-btn active" data-tab="overview">Overview</button>
+        <button class="tab-btn" data-tab="static">Static Analysis</button>
+        <button class="tab-btn" data-tab="sandbox">Sandbox</button>
+        <button class="tab-btn" data-tab="network">Network</button>
+        <button class="tab-btn" data-tab="iocs">IOCs</button>
+        <button class="tab-btn" data-tab="mitre">MITRE ATT&CK</button>
+        <button class="tab-btn" data-tab="evidence">Evidence</button>
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane active" id="overview">
+            <section class="section">
+                <h2>Sample Overview</h2>
+                <table class="info-table">
+                    <tr><th>Original Filename</th><td>{{ sample.original_filename }}</td></tr>
+                    <tr><th>File Size</th><td>{{ sample.file_size|filesizeformat }}</td></tr>
+                    <tr><th>SHA256</th><td class="hash">{{ sample.sha256 }}</td></tr>
+                    <tr><th>SHA1</th><td class="hash">{{ sample.sha1 }}</td></tr>
+                    <tr><th>MD5</th><td class="hash">{{ sample.md5 }}</td></tr>
+                    {% if sample.ssdeep %}<tr><th>SSDeep</th><td class="hash">{{ sample.ssdeep }}</td></tr>{% endif %}
+                    <tr><th>File Type</th><td>{{ sample.file_type }}</td></tr>
+                    <tr><th>MIME Type</th><td>{{ sample.mime_type }}</td></tr>
+                    <tr><th>Target OS</th><td>{{ sample.target_os|upper }}</td></tr>
+                    <tr><th>Analysis Date</th><td>{{ sample.analyzed_at }}</td></tr>
+                    <tr><th>Source</th><td>{{ sample.source }}</td></tr>
+                    <tr><th>Analysis Duration</th><td>{{ sample.analysis_duration_sec }}s</td></tr>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>Risk Scoring Breakdown</h2>
+                <table class="info-table">
+                    {% for reason in sample.risk_reasons %}
+                    <tr><td>{{ reason.category }}</td><td>{{ reason.description }}</td><td class="text-right">{{ "%.1f"|format(reason.score) }}</td></tr>
+                    {% endfor %}
+                    <tr class="total"><th>Total</th><td></td><th>{{ "%.1f"|format(sample.risk_score) }}</th></tr>
+                </table>
+            </section>
+        </div>
+
+        <!-- Static Analysis Tab -->
+        <div class="tab-pane" id="static">
+            {% if static_report %}
+            <section class="section">
+                <h2>File Identification</h2>
+                <table class="info-table">
+                    <tr><th>Magic Bytes</th><td class="hash">{{ static_report.magic_bytes }}</td></tr>
+                    <tr><th>Entropy</th><td>{{ "%.2f"|format(static_report.entropy) }} ({{ static_report.entropy_verdict }})</td></tr>
+                    <tr><th>Strings Extracted</th><td>{{ static_report.strings.total_extracted }}</td></tr>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>YARA Matches</h2>
+                {% if static_report.yara.matches %}
+                <table class="ioc-table">
+                    <thead><tr><th>Rule</th><th>Namespace</th><th>Tags</th><th>Meta</th></tr></thead>
+                    <tbody>
+                        {% for match in static_report.yara.matches %}
+                        <tr>
+                            <td>{{ match.rule }}</td>
+                            <td>{{ match.namespace }}</td>
+                            <td>{{ match.tags|join(', ') }}</td>
+                            <td>{{ match.meta|tojson }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No YARA matches found</p>
+                {% endif %}
+            </section>
+
+            <!-- Format-specific analysis -->
+            {% if static_report.format_specific %}
+            {% for fmt, data in static_report.format_specific.items() %}
+            <section class="section">
+                <h2>{{ fmt|upper }} Analysis</h2>
+                <pre class="json-output">{{ data|tojson(indent=2) }}</pre>
+            </section>
+            {% endfor %}
+            {% endif %}
+            {% else %}
+            <p class="no-data">Static analysis not available</p>
+            {% endif %}
+        </div>
+
+        <!-- Sandbox Tab -->
+        <div class="tab-pane" id="sandbox">
+            {% if sandbox_report %}
+            <section class="section">
+                <h2>Sandbox Execution Summary</h2>
+                <table class="info-table">
+                    <tr><th>Task ID</th><td>{{ sandbox_report.task_id }}</td></tr>
+                    <tr><th>Profile</th><td>{{ sandbox_report.profile }}</td></tr>
+                    <tr><th>Duration</th><td>{{ sandbox_report.duration }}s</td></tr>
+                    <tr><th>MalScore</th><td>{{ sandbox_report.malscore }}</td></tr>
+                    <tr><th>Severity</th><td>{{ sandbox_report.severity }}</td></tr>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>Behavioral Signatures</h2>
+                {% if sandbox_report.signatures %}
+                <table class="ioc-table">
+                    <thead><tr><th>Name</th><th>Description</th><th>MITRE</th><th>Severity</th></tr></thead>
+                    <tbody>
+                        {% for sig in sandbox_report.signatures %}
+                        <tr>
+                            <td>{{ sig.name }}</td>
+                            <td>{{ sig.description }}</td>
+                            <td>{{ sig.mitre|join(', ') }}</td>
+                            <td><span class="severity-{{ sig.severity|lower }}">{{ sig.severity }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No behavioral signatures triggered</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
+                <h2>Process Tree</h2>
+                <div class="process-tree">
+                    {% for proc in sandbox_report.process_tree %}
+                    {{ render_process_tree(proc, 0) }}
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>API Call Summary</h2>
+                <table class="ioc-table">
+                    <thead><tr><th>Category</th><th>Count</th><th>Top APIs</th></tr></thead>
+                    <tbody>
+                        {% for cat, data in sandbox_report.api_call_summary.items() %}
+                        <tr>
+                            <td>{{ cat }}</td>
+                            <td>{{ data.count }}</td>
+                            <td>{{ data.apis|dictsort(reverse=true)|list|slice(0,5)|map(attribute=0)|join(', ') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>Dropped Files</h2>
+                {% if sandbox_report.dropped_files %}
+                <table class="ioc-table">
+                    <thead><tr><th>Name</th><th>SHA256</th><th>Size</th><th>Type</th></tr></thead>
+                    <tbody>
+                        {% for dropped in sandbox_report.dropped_files %}
+                        <tr>
+                            <td>{{ dropped.name }}</td>
+                            <td class="hash">{{ dropped.sha256 }}</td>
+                            <td>{{ dropped.size }}</td>
+                            <td>{{ dropped.type }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No files dropped</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
+                <h2>Memory Analysis (Volatility3)</h2>
+                {% if sandbox_report.volatility_results %}
+                <pre class="json-output">{{ sandbox_report.volatility_results|tojson(indent=2) }}</pre>
+                {% else %}
+                <p class="no-data">Memory analysis not performed</p>
+                {% endif %}
+            </section>
+            {% else %}
+            <p class="no-data">Sandbox analysis not run</p>
+            {% endif %}
+        </div>
+
+        <!-- Network Tab -->
+        <div class="tab-pane" id="network">
+            {% if network_report %}
+            <section class="section">
+                <h2>Network Forensics Summary</h2>
+                <table class="info-table">
+                    <tr><th>Total Flows</th><td>{{ network_report.total_flows }}</td></tr>
+                    <tr><th>Unique Destinations</th><td>{{ network_report.unique_dst_ips }}</td></tr>
+                    <tr><th>Protocols</th><td>{{ network_report.protocols|join(', ') }}</td></tr>
+                    <tr><th>Beaconing Detected</th><td>{{ 'Yes' if network_report.beaconing_detected else 'No' }}</td></tr>
+                    <tr><th>JA3 Fingerprints</th><td>{{ network_report.ja3_fingerprints|length }}</td></tr>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>Suspicious Flows</h2>
+                {% if network_report.suspicious_flows %}
+                <table class="ioc-table">
+                    <thead><tr><th>Src IP</th><th>Dst IP</th><th>Port</th><th>Proto</th><th>Packets</th><th>Bytes</th><th>Reason</th></tr></thead>
+                    <tbody>
+                        {% for flow in network_report.suspicious_flows %}
+                        <tr>
+                            <td>{{ flow.src_ip }}</td>
+                            <td>{{ flow.dst_ip }}</td>
+                            <td>{{ flow.dst_port }}</td>
+                            <td>{{ flow.protocol }}</td>
+                            <td>{{ flow.packet_count }}</td>
+                            <td>{{ flow.bytes_total }}</td>
+                            <td>{{ flow.reason }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No suspicious flows detected</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
+                <h2>C2 Indicators</h2>
+                {% if network_report.c2_indicators %}
+                <table class="ioc-table">
+                    <thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>Details</th></tr></thead>
+                    <tbody>
+                        {% for c2 in network_report.c2_indicators %}
+                        <tr>
+                            <td>{{ c2.type }}</td>
+                            <td>{{ c2.value }}</td>
+                            <td>{{ c2.confidence }}</td>
+                            <td>{{ c2.details }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No C2 indicators found</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
+                <h2>TLS Analysis</h2>
+                {% if network_report.tls_certificates %}
+                <table class="ioc-table">
+                    <thead><tr><th>Subject</th><th>Issuer</th><th>Validity</th><th>SHA256</th><th>Self-Signed</th></tr></thead>
+                    <tbody>
+                        {% for cert in network_report.tls_certificates %}
+                        <tr>
+                            <td>{{ cert.subject }}</td>
+                            <td>{{ cert.issuer }}</td>
+                            <td>{{ cert.not_before }} to {{ cert.not_after }}</td>
+                            <td class="hash">{{ cert.sha256 }}</td>
+                            <td>{{ 'Yes' if cert.self_signed else 'No' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No TLS certificates captured</p>
+                {% endif %}
+            </section>
+            {% else %}
+            <p class="no-data">Network analysis not performed</p>
+            {% endif %}
+        </div>
+
+        <!-- IOCs Tab -->
+        <div class="tab-pane" id="iocs">
+            <section class="section">
+                <h2>All Extracted IOCs</h2>
+                {% if all_iocs %}
+                <table class="ioc-table">
+                    <thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>Source</th><th>Context</th></tr></thead>
+                    <tbody>
+                        {% for ioc in all_iocs %}
+                        <tr>
+                            <td><span class="ioc-type">{{ ioc.ioc_type }}</span></td>
+                            <td class="ioc-value">{{ ioc.value }}</td>
+                            <td><div class="confidence-bar"><div class="confidence-fill" style="width: {{ ioc.confidence * 100 }}%"></div></div></td>
+                            <td>{{ ioc.source }}</td>
+                            <td>{{ ioc.context or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No IOCs extracted</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- MITRE Tab -->
+        <div class="tab-pane" id="mitre">
+            <section class="section">
+                <h2>MITRE ATT&CK Technique Coverage</h2>
+                <div class="mitre-matrix">
+                    {% for tactic in mitre_matrix %}
+                    <div class="mitre-tactic-column">
+                        <div class="mitre-tactic-header">{{ tactic.name }}</div>
+                        {% for tech in tactic.techniques %}
+                        <div class="mitre-technique {{ 'detected' if tech.detected else '' }}">
+                            <div class="tech-id">{{ tech.id }}</div>
+                            <div class="tech-name">{{ tech.name }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Evidence Tab -->
+        <div class="tab-pane" id="evidence">
+            <section class="section">
+                <h2>Strings Sample</h2>
+                <pre class="strings-output">{{ static_report.strings.sample|join('\n') }}</pre>
+            </section>
+
+            <section class="section">
+                <h2>YARA Ruleset Info</h2>
+                <p>Ruleset: {{ static_report.yara.ruleset }}</p>
+                <p>Compiled: {{ static_report.yara.compiled_at }}</p>
+                <p>Rules: {{ static_report.yara.rule_count }}</p>
+            </section>
+
+            <section class="section">
+                <h2>Full Static Report (JSON)</h2>
+                <pre class="json-output">{{ static_report|tojson(indent=2) }}</pre>
+            </section>
+
+            {% if sandbox_report %}
+            <section class="section">
+                <h2>Full Sandbox Report (JSON)</h2>
+                <pre class="json-output">{{ sandbox_report.raw_report|tojson(indent=2) }}</pre>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="report-footer">
+        <p>MALINFO v{{ report.version }} — Government-Grade Malware Analysis Platform</p>
+        <p>This report is classified {{ report.tlp|upper }}. Handle per TLP guidelines.</p>
+    </footer>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+</script>
+</body>
+</html>

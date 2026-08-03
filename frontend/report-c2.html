@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report a malicious file or website — MALINFO</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .public-shell { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+  .public-header { text-align: center; margin-bottom: 2rem; }
+  .public-header .brand-mark { margin: 0 auto 1rem; }
+  .public-header h1 { font-family: var(--font-display); font-size: 24px; margin: 0 0 8px; }
+  .public-header p { color: var(--text-secondary); font-size: 14px; max-width: 480px; margin: 0 auto; }
+  .type-toggle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .type-toggle button {
+    font-family: var(--font-sans); font-size: 13px; padding: 0.6rem 0.5rem;
+    border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel-raised);
+    color: var(--text-secondary); cursor: pointer;
+  }
+  .type-toggle button.active { border-color: var(--saffron); color: var(--saffron); background: var(--saffron-dim); }
+  .result-box { text-align: center; padding: 2.5rem 1.5rem; }
+  .result-box .ref-code { font-family: var(--font-mono); font-size: 22px; color: var(--saffron); margin: 0.75rem 0; }
+</style>
+</head>
+<body>
+
+<div class="public-shell">
+  <div class="public-header">
+    <div class="brand-mark" style="width:48px;height:48px;font-size:18px;">MI</div>
+    <h1>Report a malicious file, link, or app</h1>
+    <p>Received a suspicious link, app, or file? Report it here — trained analysts review every submission. You can report anonymously.</p>
+  </div>
+
+  <div class="card" id="form-card">
+    <div class="notice info">This tool analyzes submitted content for threat indicators. Do not submit anything you don't have the right to share. Reports involving an active crime in progress should also go to your local police alongside this report.</div>
+
+    <div class="type-toggle" id="type-toggle">
+      <button data-type="file" class="active">Suspicious file</button>
+      <button data-type="url">Phishing link</button>
+      <button data-type="ip">C2 / malicious IP</button>
+      <button data-type="app">Malicious app</button>
+    </div>
+
+    <form id="report-form">
+      <div class="field" id="file-field">
+        <label>Upload the file</label>
+        <div class="dropzone" id="dropzone" style="padding:1.5rem;">
+          <div class="primary" id="dropzone-label">Drop a file here, or click to browse</div>
+        </div>
+        <input type="file" id="file-input">
+      </div>
+
+      <div class="field" id="value-field" style="display:none;">
+        <label id="value-label">URL</label>
+        <input type="text" id="value-input" placeholder="https://example.com/suspicious-link">
+      </div>
+
+      <div class="field">
+        <label>What happened? <span style="color:var(--text-muted)">(min. 10 characters)</span></label>
+        <textarea id="description" placeholder="e.g. Received this file via WhatsApp claiming to be a bank KYC update form. It asked to enable installation from unknown sources."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Your name <span style="color:var(--text-muted)">(optional — leave blank to report anonymously)</span></label>
+        <input type="text" id="reporter-name">
+      </div>
+
+      <div class="field">
+        <label>Contact email or phone <span style="color:var(--text-muted)">(optional — only if you want a follow-up)</span></label>
+        <input type="text" id="reporter-contact">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%; padding:0.75rem;">Submit report</button>
+      <div id="form-error" style="color:var(--danger); font-size:13px; margin-top:8px; display:none;"></div>
+    </form>
+  </div>
+
+  <div class="card result-box" id="result-card" style="display:none;">
+    <div style="color:var(--safe); font-size:15px;">Report received</div>
+    <div class="ref-code" id="ref-code"></div>
+    <p style="color:var(--text-secondary); font-size:13px;">Save this reference code to check your report's status. Analysts typically triage within 24–48 hours.</p>
+    <button class="btn" onclick="location.reload()">Submit another report</button>
+  </div>
+
+  <div style="text-align:center; margin-top:1.5rem;">
+    <a href="index.html" style="font-size:13px; color:var(--text-muted);">Analyst console login &rarr;</a>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/report-c2.js"></script>
+</body>
+</html>

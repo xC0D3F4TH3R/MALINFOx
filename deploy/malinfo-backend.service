@@ -1,0 +1,84 @@
+# MALINFO Backend Systemd Service — Production Hardened
+# For running on bare metal or VMs without Docker
+# Install: sudo cp /opt/malinfo/deploy/malinfo-backend.service /etc/systemd/system/
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable --now malinfo-backend
+
+[Unit]
+Description=MALINFO Malware Analysis Platform — Backend API
+Documentation=https://malinfo.example.gov/docs
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+Requires=postgresql.service redis.service
+
+[Service]
+Type=notify
+User=malinfo
+Group=malinfo
+WorkingDirectory=/opt/malinfo/backend
+EnvironmentFile=/opt/malinfo/.env
+Environment=PATH=/opt/malinfo/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=MALINFO_ENV=production
+ExecStartPre=/bin/bash -c 'mkdir -p /opt/malinfo/storage/uploads /opt/malinfo/storage/reports /opt/malinfo/storage/pcaps && chown -R malinfo:malinfo /opt/malinfo/storage'
+ExecStart=/opt/malinfo/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --access-log --log-level info
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=60
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Security hardening — maximum protection
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+
+# Capability bounding
+CapabilityBoundingSet=CAP_DAC_OVERRIDE CAP_SETGID CAP_SETUID
+AmbientCapabilities=CAP_DAC_OVERRIDE CAP_SETGID CAP_SETUID
+
+# Filesystem access — only what's needed
+ReadWritePaths=/opt/malinfo/storage
+ReadOnlyPaths=/opt/malinfo/backend /opt/malinfo/.env
+InaccessiblePaths=/root /home/*/.ssh /etc/shadow /etc/gshadow
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitMEMLOCK=65536
+MemoryMax=4G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=malinfo-backend
+LogLevelMax=info
+
+# Watchdog
+WatchdogSec=60
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+Alias=malinfo.service

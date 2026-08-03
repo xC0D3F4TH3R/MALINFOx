@@ -1,0 +1,144 @@
+# MALINFO YARA Feed Configuration
+# External threat intelligence feeds for automated rule updates
+
+feeds:
+  # Official MALINFO curated rulesets (updated with each release)
+  - feed_id: "malinfo-official"
+    name: "MALINFO Official Rulesets"
+    url: "https://raw.githubusercontent.com/malinfo/rules/main/rulesets/"
+    auth_type: "none"
+    schedule: "daily"
+    enabled: true
+    filters:
+      tags: ["malinfo", "official"]
+      severity: ["medium", "high", "critical"]
+
+  # MalwareBazaar YARA rules
+  - feed_id: "malwarebazaar"
+    name: "MalwareBazaar YARA Rules"
+    url: "https://bazaar.abuse.ch/export/yara/"
+    auth_type: "none"
+    schedule: "daily"
+    enabled: true
+    filters:
+      tags: ["malwarebazaar"]
+      min_confidence: 70
+
+  # YARA-Rules project (community)
+  - feed_id: "yara-rules"
+    name: "YARA-Rules Community Project"
+    url: "https://raw.githubusercontent.com/YARA-Rules/rules/master/"
+    auth_type: "none"
+    schedule: "weekly"
+    enabled: true
+    filters:
+      tags: ["malware", "apt", "rat", "ransomware"]
+      exclude_tags: ["test", "experimental"]
+
+  # Florian Roth's Neo23x0 signature base
+  - feed_id: "neo23x0-signatures"
+    name: "Neo23x0 Signature Base"
+    url: "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/"
+    auth_type: "none"
+    schedule: "weekly"
+    enabled: true
+    filters:
+      severity: ["high", "critical"]
+      exclude_tags: ["false_positive_prone"]
+
+  # Elastic Security rules
+  - feed_id: "elastic-rules"
+    name: "Elastic Security YARA Rules"
+    url: "https://raw.githubusercontent.com/elastic/protections-artifacts/main/yara/"
+    auth_type: "none"
+    schedule: "weekly"
+    enabled: true
+    filters:
+      tags: ["malware", "exploit", "apt"]
+
+  # Carbon Black / VMware rules
+  - feed_id: "carbonblack"
+    name: "Carbon Black YARA Rules"
+    url: "https://raw.githubusercontent.com/carbonblack/yara-rules/master/"
+    auth_type: "none"
+    schedule: "monthly"
+    enabled: true
+    filters:
+      tags: ["malware", "apt"]
+
+  # ReversingLabs rules (requires API key)
+  - feed_id: "reversinglabs"
+    name: "ReversingLabs YARA Rules"
+    url: "https://api.reversinglabs.com/yara/v1/rules"
+    auth_type: "bearer"
+    auth_config:
+      api_key_env: "REVERSINGLABS_API_KEY"
+    schedule: "daily"
+    enabled: false  # Requires subscription
+    filters:
+      confidence_min: 80
+
+  # Custom organizational feed (configure for your environment)
+  - feed_id: "custom-org"
+    name: "Custom Organizational Rules"
+    url: "https://your-internal-feed.example.com/yara/"
+    auth_type: "api_key"
+    auth_config:
+      header: "X-API-Key"
+      api_key_env: "CUSTOM_YARA_FEED_KEY"
+    schedule: "daily"
+    enabled: false  # Enable and configure for your org
+    filters:
+      tags: ["internal", "custom"]
+
+# Compilation settings
+compilation:
+  # Maximum time per rule (ms) before auto-disabling
+  max_rule_time_ms: 100
+  # Maximum total compilation time (seconds)
+  max_compilation_time_sec: 300
+  # Parallel workers for compilation
+  workers: 4
+  # Enable incremental compilation
+  incremental: true
+  # Cache compiled rulesets
+  cache_compiled: true
+  # Performance budget per file scan (ms)
+  scan_budget_ms: 5000
+
+# Performance monitoring
+performance:
+  # Track per-rule match times
+  track_rule_timing: true
+  # Track hit rates
+  track_hit_rates: true
+  # Auto-disable rules exceeding budget
+  auto_disable_slow: true
+  # Slow rule threshold (ms)
+  slow_threshold_ms: 500
+  # Minimum scans before evaluating performance
+  min_scans_for_eval: 100
+
+# Testing
+testing:
+  # Test cases directory
+  test_cases_dir: "/opt/malinfo/rules/yara/test_cases"
+  # Run tests on compilation
+  test_on_compile: true
+  # Required test pass rate
+  required_pass_rate: 0.95
+  # Positive test samples per rule (minimum)
+  min_positive_samples: 3
+  # Negative test samples per rule (minimum)
+  min_negative_samples: 10
+
+# False positive tracking
+false_positives:
+  # Enable FP tracking
+  enabled: true
+  # FP threshold (rate) before alerting
+  fp_rate_threshold: 0.05
+  # Auto-create tuning tickets
+  auto_create_tickets: true
+  # Retention days for FP data
+  retention_days: 365

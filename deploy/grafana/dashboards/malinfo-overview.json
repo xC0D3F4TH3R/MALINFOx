@@ -1,0 +1,111 @@
+{
+  "dashboard": {
+    "title": "MALINFO Platform Overview",
+    "uid": "malinfo-overview",
+    "tags": ["malinfo", "overview"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Analysis Throughput",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(malinfo_samples_analyzed_total[5m])",
+            "legendFormat": "Samples/min"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Verdict Distribution",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "malinfo_samples_by_verdict",
+            "legendFormat": "{{verdict}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"malinfo-backend\"}[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "API Latency (p95)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"malinfo-backend\"}[5m]))",
+            "legendFormat": "p95"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Sandbox Queue Depth",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 16, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "malinfo_sandbox_queue_depth",
+            "legendFormat": "Queue"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Active Monitoring Events",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 16, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "malinfo_monitoring_pending_queue",
+            "legendFormat": "Pending"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Threat Intel Lookups",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(malinfo_threat_intel_lookups_total[5m])",
+            "legendFormat": "{{provider}}"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 24, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"malinfo-backend\",status=~\"5..\"}[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+# MALINFO Backend - Production Dockerfile
+# Multi-stage build for minimal production image
+
+# --- Build Stage ---
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libmagic1 \
+    libfuzzy-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# --- Runtime Stage ---
+FROM python:3.11-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    libfuzzy2 \
+    libssl3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r malinfo && useradd -r -g malinfo -d /app -s /bin/bash malinfo
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /home/malinfo/.local
+
+# Copy application code
+COPY backend/app ./app
+COPY backend/requirements.txt .
+
+# Create storage directories
+RUN mkdir -p /app/storage/uploads /app/storage/reports /app/storage/pcaps \
+    && chown -R malinfo:malinfo /app
+
+# Switch to non-root user
+USER malinfo
+
+# Add user packages to PATH
+ENV PATH=/home/malinfo/.local/bin:$PATH
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    MALINFO_ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Run application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

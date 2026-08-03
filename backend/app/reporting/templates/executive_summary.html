@@ -1,0 +1,171 @@
+{# MALINFO - Executive Summary Report Template #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MALINFO Analysis Report - {{ sample.original_filename }}</title>
+<style>
+{{ css_style }}
+</style>
+</head>
+<body>
+<div class="report-container">
+    <!-- Header -->
+    <header class="report-header">
+        <div class="header-left">
+            <div class="brand-mark">MI</div>
+            <div>
+                <h1>MALINFO Analysis Report</h1>
+                <div class="report-meta">Executive Summary</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="verdict-badge verdict-{{ sample.verdict|lower }}">
+                {{ sample.verdict|upper }}
+            </div>
+            <div class="risk-score">Risk Score: {{ "%.1f"|format(sample.risk_score) }}/100</div>
+        </div>
+    </header>
+
+    <!-- Classification -->
+    <div class="classification-bar">
+        <span class="tlp tlp-{{ report.tlp|lower }}">TLP:{{ report.tlp|upper }}</span>
+        <span class="report-id">Report ID: {{ report.report_id }}</span>
+        <span class="timestamp">Generated: {{ report.generated_at }}</span>
+    </div>
+
+    <!-- Key Findings -->
+    <section class="section">
+        <h2>🔍 Key Findings</h2>
+        <div class="findings-grid">
+            <div class="finding-card">
+                <div class="finding-label">Verdict</div>
+                <div class="finding-value verdict-{{ sample.verdict|lower }}">{{ sample.verdict|upper }}</div>
+            </div>
+            <div class="finding-card">
+                <div class="finding-label">Risk Score</div>
+                <div class="finding-value">{{ "%.1f"|format(sample.risk_score) }}/100</div>
+            </div>
+            <div class="finding-card">
+                <div class="finding-label">File Type</div>
+                <div class="finding-value">{{ sample.file_type }}</div>
+            </div>
+            <div class="finding-card">
+                <div class="finding-label">Target OS</div>
+                <div class="finding-value">{{ sample.target_os|upper }}</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sample Information -->
+    <section class="section">
+        <h2>📄 Sample Information</h2>
+        <table class="info-table">
+            <tr><th>Original Filename</th><td>{{ sample.original_filename }}</td></tr>
+            <tr><th>File Size</th><td>{{ sample.file_size|filesizeformat }}</td></tr>
+            <tr><th>SHA256</th><td class="hash">{{ sample.sha256 }}</td></tr>
+            <tr><th>SHA1</th><td class="hash">{{ sample.sha1 }}</td></tr>
+            <tr><th>MD5</th><td class="hash">{{ sample.md5 }}</td></tr>
+            {% if sample.ssdeep %}<tr><th>SSDeep</th><td class="hash">{{ sample.ssdeep }}</td></tr>{% endif %}
+            <tr><th>MIME Type</th><td>{{ sample.mime_type }}</td></tr>
+            <tr><th>Analysis Date</th><td>{{ sample.analyzed_at }}</td></tr>
+            <tr><th>Source</th><td>{{ sample.source }}</td></tr>
+        </table>
+    </section>
+
+    <!-- Executive Summary -->
+    <section class="section">
+        <h2>📋 Executive Summary</h2>
+        <div class="executive-summary">
+            {{ report.executive_summary|safe }}
+        </div>
+    </section>
+
+    <!-- Top IOCs -->
+    {% if report.top_iocs %}
+    <section class="section">
+        <h2>🎯 Top Indicators of Compromise</h2>
+        <table class="ioc-table">
+            <thead>
+                <tr><th>Type</th><th>Value</th><th>Confidence</th><th>Context</th></tr>
+            </thead>
+            <tbody>
+                {% for ioc in report.top_iocs %}
+                <tr>
+                    <td><span class="ioc-type">{{ ioc.ioc_type }}</span></td>
+                    <td class="ioc-value">{{ ioc.value }}</td>
+                    <td><div class="confidence-bar"><div class="confidence-fill" style="width: {{ ioc.confidence * 100 }}%"></div></div></td>
+                    <td>{{ ioc.context or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    <!-- MITRE ATT&CK Techniques -->
+    {% if report.mitre_techniques %}
+    <section class="section">
+        <h2>⚔️ MITRE ATT&CK Techniques Observed</h2>
+        <div class="mitre-grid">
+            {% for tech in report.mitre_techniques %}
+            <div class="mitre-card">
+                <div class="mitre-id">{{ tech.id }}</div>
+                <div class="mitre-name">{{ tech.name }}</div>
+                <div class="mitre-tactic">{{ tech.tactic }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Recommended Actions -->
+    <section class="section">
+        <h2>🛡️ Recommended Actions</h2>
+        <ol class="recommendations">
+            {% for rec in report.recommendations %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ol>
+    </section>
+
+    <!-- Analysis Details Summary -->
+    <section class="section">
+        <h2>🔬 Analysis Summary</h2>
+        <div class="analysis-summary">
+            <div class="summary-item">
+                <span class="summary-label">Static Analysis</span>
+                <span class="summary-value {% if report.static_done %}done{% else %}pending{% endif %}">
+                    {% if report.static_done %}Completed{% else %}Not Run{% endif %}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Dynamic Sandbox</span>
+                <span class="summary-value {% if report.sandbox_done %}done{% else %}pending{% endif %}">
+                    {% if report.sandbox_done %}Completed (Score: {{ report.sandbox_score }}){% else %}Not Run{% endif %}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Network Forensics</span>
+                <span class="summary-value {% if report.network_done %}done{% else %}pending{% endif %}">
+                    {% if report.network_done %}Completed{% else %}Not Run{% endif %}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Threat Intel Enrichment</span>
+                <span class="summary-value {% if report.ti_done %}done{% else %}pending{% endif %}">
+                    {% if report.ti_done %}Completed{% else %}Not Run{% endif %}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="report-footer">
+        <p>MALINFO v{{ report.version }} — Government-Grade Malware Analysis Platform</p>
+        <p>This report is classified {{ report.tlp|upper }}. Handle per TLP guidelines.</p>
+    </footer>
+</div>
+</body>
+</html>

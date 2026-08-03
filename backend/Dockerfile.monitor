@@ -1,0 +1,42 @@
+# MALINFO Monitoring Service - Production Dockerfile
+# Runs the file transfer monitoring service
+
+FROM python:3.11-slim as builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libmagic1 \
+    libfuzzy-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    libfuzzy2 \
+    libssl3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r malinfo && useradd -r -g malinfo -d /app -s /bin/bash malinfo
+
+WORKDIR /app
+COPY --from=builder /root/.local /home/malinfo/.local
+COPY backend/app ./app
+
+RUN mkdir -p /app/storage/uploads /app/storage/reports /app/storage/pcaps \
+    && chown -R malinfo:malinfo /app
+
+USER malinfo
+ENV PATH=/home/malinfo/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV MALINFO_ENV=production
+
+# Run monitoring service
+CMD ["python", "-m", "app.monitoring.transfer_monitor"]

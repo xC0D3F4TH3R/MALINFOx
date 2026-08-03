@@ -1,0 +1,94 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'malinfo'
+    environment: 'production'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # MALINFO Backend (Docker Compose)
+  - job_name: 'malinfo-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/metrics'
+
+  # MALINFO Backend (Kubernetes)
+  - job_name: 'malinfo-backend-k8s'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - malinfo
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: malinfo-backend
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+
+  # NGINX (Docker Compose)
+  - job_name: 'malinfo-nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+
+  # NGINX (Kubernetes)
+  - job_name: 'malinfo-nginx-k8s'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - malinfo
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: malinfo-nginx
+
+  # PostgreSQL (via postgres-exporter)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis (via redis-exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Node Exporter (Docker Compose)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Node Exporter (Kubernetes)
+  - job_name: 'node-k8s'
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+
+  # ICAP Gateway
+  - job_name: 'malinfo-icap'
+    static_configs:
+      - targets: ['icap:9114']
+
+  # File Monitor
+  - job_name: 'malinfo-monitor'
+    static_configs:
+      - targets: ['monitor:9115']

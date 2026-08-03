@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MALINFO Analysis Report — {{ r.sample.original_filename }}</title>
+<style>
+  :root {
+    --ink: #10151c; --paper: #f7f5f0; --line: #d8d3c7;
+    --safe: #1f7a4d; --warn: #b5730a; --danger: #a3231a;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --sans: 'IBM Plex Sans', Arial, sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--paper); color: var(--ink); margin: 0; padding: 2.5rem; line-height: 1.5; }
+  .header { border-bottom: 3px solid var(--ink); padding-bottom: 1rem; margin-bottom: 2rem; display:flex; justify-content:space-between; align-items:flex-end;}
+  .header h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.02em; }
+  .header .tag { font-family: var(--mono); font-size: 0.8rem; color: #666; }
+  .verdict { display:inline-block; padding: 0.3rem 0.9rem; border-radius: 3px; font-weight: 700; font-family: var(--mono); text-transform: uppercase; font-size: 0.85rem; }
+  .verdict.clean { background: #dcf1e4; color: var(--safe); }
+  .verdict.suspicious { background: #f7e6c8; color: var(--warn); }
+  .verdict.malicious { background: #f4d4d1; color: var(--danger); }
+  .score { font-family: var(--mono); font-size: 2.2rem; font-weight: 700; }
+  section { margin-bottom: 2.2rem; }
+  h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--line); padding-bottom: 0.4rem; color: #444; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  td, th { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: #666; font-weight: 600; width: 200px; }
+  code, .mono { font-family: var(--mono); font-size: 0.85rem; }
+  ul.reasons li { margin-bottom: 0.3rem; }
+  .ioc-tag { display:inline-block; font-family: var(--mono); font-size: 0.75rem; background:#eee; border:1px solid var(--line); border-radius:3px; padding:0.1rem 0.4rem; margin: 0.1rem; }
+  .footer { margin-top: 3rem; font-size: 0.75rem; color: #888; border-top: 1px solid var(--line); padding-top: 1rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>MALINFO Analysis Report</h1>
+    <div class="tag">Report ID: {{ r.report_id }} &middot; Generated {{ r.generated_at }}</div>
+  </div>
+  <div style="text-align:right;">
+    <div class="score">{{ r.risk_score }}<span style="font-size:1rem;color:#888;">/100</span></div>
+    <span class="verdict {{ r.verdict }}">{{ r.verdict }}</span>
+  </div>
+</div>
+
+<section>
+  <h2>Sample</h2>
+  <table>
+    <tr><th>Filename</th><td>{{ r.sample.original_filename }}</td></tr>
+    <tr><th>Size</th><td>{{ r.sample.file_size }} bytes</td></tr>
+    <tr><th>Type</th><td>{{ r.sample.file_type }} ({{ r.sample.target_os }})</td></tr>
+    <tr><th>SHA-256</th><td class="mono">{{ r.sample.sha256 }}</td></tr>
+    <tr><th>SHA-1</th><td class="mono">{{ r.sample.sha1 }}</td></tr>
+    <tr><th>MD5</th><td class="mono">{{ r.sample.md5 }}</td></tr>
+    {% if r.sample.ssdeep %}<tr><th>ssdeep</th><td class="mono">{{ r.sample.ssdeep }}</td></tr>{% endif %}
+    <tr><th>Source</th><td>{{ r.sample.source }}</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Why this verdict</h2>
+  <ul class="reasons">
+    {% for reason in r.static_analysis.risk_reasons %}
+    <li>{{ reason }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section>
+  <h2>C2 / Command &amp; Control Indicators</h2>
+  {% if r.c2_servers %}
+  <table>
+    <tr><th>Indicator</th><th style="width:auto;">Details</th></tr>
+    {% for c2 in r.c2_servers %}
+    <tr>
+      <td class="mono">{{ c2.ip or c2.domain }}</td>
+      <td>
+        Confidence: {{ (c2.confidence * 100) | round | int }}%<br>
+        {% if c2.check_in_count %}Check-ins: {{ c2.check_in_count }} (~{{ c2.mean_interval_sec }}s interval)<br>{% endif %}
+        {% if c2.associated_domains %}Associated domains: {{ c2.associated_domains | join(', ') }}<br>{% endif %}
+        <em>{{ c2.reasons | join(' — ') }}</em>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>No command-and-control indicators identified.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Indicators of Compromise</h2>
+  {% for ioc in r.iocs %}
+  <span class="ioc-tag">[{{ ioc.ioc_type }}] {{ ioc.value }} ({{ (ioc.confidence*100)|round|int }}%)</span>
+  {% endfor %}
+</section>
+
+<section>
+  <h2>Static Analysis</h2>
+  <table>
+    <tr><th>File entropy</th><td>{{ r.static_analysis.entropy }} ({{ r.static_analysis.entropy_verdict }})</td></tr>
+    <tr><th>YARA matches</th><td>{{ r.static_analysis.yara.matches | length }}</td></tr>
+    <tr><th>Strings extracted</th><td>{{ r.static_analysis.strings.total_extracted }}</td></tr>
+  </table>
+  {% if r.static_analysis.yara.matches %}
+  <table>
+    <tr><th>Rule</th><th style="width:auto">Meta</th></tr>
+    {% for m in r.static_analysis.yara.matches %}
+    <tr><td class="mono">{{ m.rule }}</td><td>{{ m.meta.description }} — severity: {{ m.meta.severity }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Dynamic (Sandbox) Analysis</h2>
+  {% if r.dynamic_analysis.available %}
+  <table>
+    <tr><th>Task ID</th><td class="mono">{{ r.dynamic_analysis.task_id }}</td></tr>
+    <tr><th>Malscore</th><td>{{ r.dynamic_analysis.malscore }}</td></tr>
+    <tr><th>Dropped files</th><td>{{ r.dynamic_analysis.dropped_files | join(', ') }}</td></tr>
+  </table>
+  <ul>
+    {% for sig in r.dynamic_analysis.signatures %}<li>{{ sig }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p><em>Not available: {{ r.dynamic_analysis.reason }}</em></p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Network Forensics</h2>
+  {% if r.network_forensics.available %}
+  <table>
+    <tr><th>Packets captured</th><td>{{ r.network_forensics.packet_count }}</td></tr>
+    <tr><th>External IPs contacted</th><td>{{ r.network_forensics.unique_external_ips | join(', ') }}</td></tr>
+    <tr><th>DNS queries</th><td>{{ r.network_forensics.dns_queries | join(', ') }}</td></tr>
+    <tr><th>Beaconing detected</th><td>{{ r.network_forensics.beaconing_detected }}</td></tr>
+  </table>
+  {% else %}
+  <p><em>Not available: {{ r.network_forensics.reason }}</em></p>
+  {% endif %}
+</section>
+
+<div class="footer">
+  Generated by MALINFO. This report is a decision-support artifact, not a substitute for
+  qualified analyst review. Automated verdicts should be corroborated before action is taken
+  (blocking, takedown requests, legal referral).
+</div>
+
+</body>
+</html>

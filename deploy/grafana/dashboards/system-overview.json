@@ -1,0 +1,153 @@
+{
+  "dashboard": {
+    "title": "MALINFO - System Overview",
+    "tags": ["malinfo", "overview"],
+    "timezone": "utc",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {"expr": "up{job=~\"malinfo-.*\"}", "legendFormat": "{{job}}", "refId": "A"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}}, "result": {"text": "DOWN", "color": "red"}},
+              {"type": "value", "options": {"1": {"text": "UP", "color": "green"}}, "result": {"text": "UP", "color": "green"}}
+            ],
+            "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Request Rate (req/s)",
+        "type": "graph",
+        "gridPos": {"x": 6, "y": 0, "w": 12, "h": 4},
+        "targets": [
+          {"expr": "rate(http_requests_total{job=\"malinfo-backend\"}[1m])", "legendFormat": "{{method}} {{handler}}"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "API Error Rate",
+        "type": "graph",
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {"expr": "sum(rate(http_requests_total{job=\"malinfo-backend\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"malinfo-backend\"}[5m]))", "legendFormat": "Error Rate"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.01}, {"color": "red", "value": 0.05}]}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "API Latency (p50, p95, p99)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {"expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"malinfo-backend\"}[5m])) by (le))", "legendFormat": "p50"},
+          {"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"malinfo-backend\"}[5m])) by (le))", "legendFormat": "p95"},
+          {"expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"malinfo-backend\"}[5m])) by (le))", "legendFormat": "p99"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Analysis Throughput (samples/min)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {"expr": "malinfo:analysis_throughput_per_minute", "legendFormat": "Static Analysis"},
+          {"expr": "malinfo:sandbox_throughput_per_hour / 60", "legendFormat": "Sandbox"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Backend Memory Usage",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 10, "w": 6, "h": 6},
+        "targets": [
+          {"expr": "malinfo:memory_usage_percent", "legendFormat": "Memory %"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Backend CPU Usage",
+        "type": "gauge",
+        "gridPos": {"x": 6, "y": 10, "w": 6, "h": 6},
+        "targets": [
+          {"expr": "malinfo:cpu_usage_percent", "legendFormat": "CPU %"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Storage Usage",
+        "type": "gauge",
+        "gridPos": {"x": 12, "y": 10, "w": 6, "h": 6},
+        "targets": [
+          {"expr": "malinfo:storage_usage_percent", "legendFormat": "Storage %"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Database Connections",
+        "type": "gauge",
+        "gridPos": {"x": 18, "y": 10, "w": 6, "h": 6},
+        "targets": [
+          {"expr": "malinfo:db_connections_percent", "legendFormat": "DB Connections %"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Active Alerts",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 16, "w": 24, "h": 8},
+        "targets": [
+          {"expr": "ALERTS{alertname=~\"Malinfo.*\"}", "format": "table", "refId": "A"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {"align": "left", "displayMode": "auto"}
+          }
+        }
+      }
+    ],
+    "schemaVersion": 38,
+    "version": 1
+  }
+}

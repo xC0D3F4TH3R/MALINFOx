@@ -1,0 +1,26 @@
+[Unit]
+Description=MALINFO backend API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=malinfo
+Group=malinfo
+WorkingDirectory=/opt/malinfo/backend
+EnvironmentFile=/opt/malinfo/.env
+ExecStart=/opt/malinfo/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+Restart=on-failure
+RestartSec=5
+
+# Hardening — a malware-handling service should be tightly sandboxed
+# even though it doesn't execute samples itself (that's the isolated
+# CAPEv2 cluster's job); this limits blast radius of any bug in a parser.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/malinfo/backend/storage
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
