@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     # --- YARA ----------------------------------------------------------------
     YARA_RULES_DIR: Path = BASE_DIR / "app" / "rules" / "yara"
 
+    # --- VM Orchestrator --------------------------------------------------------
+    # Built-in VM orchestration settings (alternative to CAPEv2)
+    VM_ORCHESTRATOR_ENABLED: bool = True
+    VM_STORAGE_DIR: Path = BASE_DIR / "storage" / "vms"
+    VM_ISO_DIR: Path = BASE_DIR / "storage" / "isos"
+    VM_AGENT_PORT: int = 9090
+    LIBVIRT_URI: str = "qemu:///system"
+
     # --- Sandbox (CAPEv2 / Cuckoo-compatible REST API) ------------------------
     # Point this at your isolated detonation cluster. NEVER point this at
     # production infrastructure with internet egress unless the sandbox

@@ -45,7 +45,7 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-select = ["E", "W", "F", "I", "B", "C4", "UP", "PIE", "T20", "DTZ", "RUF", "ARG", "PTH", "ERA", "PL", "TRY", "NPY", "BLE", "SIM", "TCH", "INT", "QF"]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "PIE", "T20", "DTZ", "RUF", "ARG", "PTH", "ERA", "PL", "TRY", "NPY", "BLE", "SIM", "TCH", "INT"]
 ignore = ["E501", "B008", "BLE001", "TRY003", "ARG001", "ARG002"]
 per-file-ignores = { "tests/*" = ["S101", "S106"] }
 

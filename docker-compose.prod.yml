@@ -114,6 +114,9 @@ services:
     volumes:
       - malinfo_storage:/app/storage
       - malinfo_yara_rules:/app/app/rules/yara:ro
+      - /var/lib/libvirt:/var/lib/libvirt:rw
+      - /dev/kvm:/dev/kvm:rw
+      - /run/libvirt:/run/libvirt:rw
     expose:
       - "8000"
     deploy:
@@ -130,6 +133,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    cap_add:
+      - SYS_ADMIN
+      - CAP_DAC_OVERRIDE
+      - CAP_SYS_RESOURCE
+    security_opt:
+      - apparmor:unconfined
 
   # --- ICAP Gateway (optional - for network gateway integration) ---
   icap:

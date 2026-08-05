@@ -404,6 +404,58 @@ export const API = {
   },
 
   // =========================================================================
+  // VM Orchestrator
+  // =========================================================================
+
+  async getISOs() {
+    return this.get('/vm/isos');
+  },
+
+  async deleteISO(name) {
+    return this.delete(`/vm/isos/${encodeURIComponent(name)}`);
+  },
+
+  async getVMTemplates() {
+    return this.get('/vm/templates');
+  },
+
+  async getVMTemplate(templateId) {
+    return this.get(`/vm/templates/${templateId}`);
+  },
+
+  async createVMTemplate(data) {
+    return this.post('/vm/templates', data);
+  },
+
+  async deleteVMTemplate(templateId) {
+    return this.delete(`/vm/templates/${templateId}`);
+  },
+
+  async rebuildVMTemplate(templateId) {
+    return this.post(`/vm/templates/${templateId}/rebuild`);
+  },
+
+  async submitVMAnalysis(sampleId, templateId, options = {}) {
+    return this.post('/vm/analyze', { sample_id: sampleId, template_id: templateId, ...options });
+  },
+
+  async getVMTasks(params = {}) {
+    return this.get('/vm/tasks', params);
+  },
+
+  async getVMTask(taskId) {
+    return this.get(`/vm/tasks/${taskId}`);
+  },
+
+  async getVMTaskReport(taskId, format = 'json') {
+    return this.get(`/vm/tasks/${taskId}/report`, { format });
+  },
+
+  async cancelVMTask(taskId) {
+    return this.post(`/vm/tasks/${taskId}/cancel`);
+  },
+
+  // =========================================================================
   // Health Check
   // =========================================================================
 

@@ -14,7 +14,7 @@ import { ThreatIntelPage } from './pages/threat-intel.js';
 import { IOCsPage } from './pages/iocs.js';
 import { UsersPage } from './pages/users.js';
 import { AuditPage } from './pages/audit.js';
-import { SettingsPage } from './pages/settings.js';
+import { VMPage } from './pages/vm.js';
 import { ProfilePage } from './pages/profile.js';
 
 // Application State
@@ -37,7 +37,7 @@ const App = {
     iocs: IOCsPage,
     users: UsersPage,
     audit: AuditPage,
-    settings: SettingsPage,
+    vm: VMPage,
     profile: ProfilePage,
   },
 
@@ -91,7 +91,7 @@ const App = {
   // Update navigation based on user role
   updateNavigationForRole(role) {
     const adminOnly = ['users', 'audit', 'settings'];
-    const analystOnly = ['sandbox', 'monitoring', 'network', 'threat-intel', 'iocs'];
+    const analystOnly = ['sandbox', 'monitoring', 'network', 'threat-intel', 'iocs', 'vm'];
     
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
       const page = item.dataset.page;

@@ -4,6 +4,7 @@ FROM python:3.12-slim
 #   libmagic1     -> python-magic (file type identification)
 #   libfuzzy-dev  -> ssdeep (fuzzy hashing)
 #   build-essential, python3-dev -> compiling yara-python / ssdeep wheels
+#   libvirt-dev, qemu-kvm, libvirt-daemon-system -> VM orchestration
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libfuzzy-dev \
@@ -11,6 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     libyara-dev \
     tcpdump \
+    libvirt-dev \
+    qemu-kvm \
+    libvirt-daemon-system \
+    virtinst \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -20,7 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p storage/uploads storage/reports storage/pcaps
+RUN mkdir -p storage/uploads storage/reports storage/pcaps storage/vms storage/isos
 
 EXPOSE 8000
 
@@ -30,4 +35,5 @@ EXPOSE 8000
 #     single-node pilot; for HA use multiple uvicorn workers behind nginx,
 #     or gunicorn -k uvicorn.workers.UvicornWorker)
 #   - Terminate TLS at nginx (see deploy/nginx.conf), never expose 8000 directly
+#   - Requires --privileged or specific capabilities for libvirt/QEMU
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

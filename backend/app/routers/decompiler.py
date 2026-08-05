@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Depends,
     HTTPException,
     status,
 )

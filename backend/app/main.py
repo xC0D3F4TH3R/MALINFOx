@@ -27,6 +27,7 @@ from app.routers import (
     sandbox,
     threat_intel,
     upload,
+    vm_orchestrator,
     yara,
 )
 
@@ -142,6 +143,7 @@ app.include_router(public_report.router, prefix=settings.API_PREFIX)
 app.include_router(monitoring.router, prefix=settings.API_PREFIX)
 app.include_router(threat_intel.router, prefix=settings.API_PREFIX)
 app.include_router(yara.router, prefix=settings.API_PREFIX)
+app.include_router(vm_orchestrator.router, prefix=settings.API_PREFIX)
 app.include_router(decompiler.router, prefix=settings.API_PREFIX)
 
 # Serve the report storage directory read-only for direct HTML report links

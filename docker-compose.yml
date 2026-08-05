@@ -36,8 +36,17 @@ services:
         condition: service_healthy
     volumes:
       - malinfo_storage:/app/storage
+      - /var/lib/libvirt:/var/lib/libvirt:rw
+      - /dev/kvm:/dev/kvm:rw
+      - /run/libvirt:/run/libvirt:rw
     expose:
       - "8000"
+    cap_add:
+      - SYS_ADMIN
+      - CAP_DAC_OVERRIDE
+      - CAP_SYS_RESOURCE
+    security_opt:
+      - apparmor:unconfined
 
   nginx:
     image: nginx:1.27-alpine
