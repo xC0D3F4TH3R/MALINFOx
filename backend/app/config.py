@@ -117,6 +117,15 @@ class Settings(BaseSettings):
     AUDIT_LOG_LEVEL: str = "info"  # debug, info, warning, critical
 
 
+# --- Email / Agency Notification -------------------------------------------
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_TLS: bool = True
+    NOTIFICATION_FROM_EMAIL: str = "noreply@malinfo.gov"
+    AGENCY_NOTIFICATION_EMAIL: str = "ary4ntom4r@gmail.com"
+
 # --- Decompiler Integration ----------------------------------------------
     GHIDRA_PATH: str = "/opt/ghidra"
     RETDEC_PATH: str = "/usr/bin/retdec-decompiler"
@@ -127,4 +136,4 @@ settings = Settings()
 
 # Ensure storage directories exist at import time
 for _dir in (settings.UPLOAD_DIR, settings.REPORT_DIR, settings.PCAP_DIR):
-    os.makedirs(_dir, exist_ok=True)
+    _dir.mkdir(parents=True, exist_ok=True)

@@ -6,23 +6,20 @@ REST API endpoints for VM template management, ISO uploads, and dynamic analysis
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
-import os
-import shutil
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from app.sandbox.vm_orchestrator import (
-    VMOrchestrator,
-    VMTemplate,
     AnalysisTask,
     TaskState,
-    VMState,
     get_orchestrator,
 )
 
@@ -30,8 +27,14 @@ logger = logging.getLogger("malinfo.vm_router")
 
 router = APIRouter(prefix="/vm", tags=["VM Orchestrator"])
 
+# ─── Constants ───
+
+MALSCORE_CRITICAL = 80
+MALSCORE_HIGH = 40
+MALSCORE_MEDIUM = 20
 
 # ─── Pydantic Models ───
+
 
 class ISOUploadResponse(BaseModel):
     name: str
@@ -123,6 +126,7 @@ class TaskDetailResponse(TaskStatusResponse):
 
 # ─── ISO Management ───
 
+
 @router.post("/isos/upload", response_model=ISOUploadResponse)
 async def upload_iso(
     file: UploadFile = File(...),
@@ -132,29 +136,29 @@ async def upload_iso(
 ):
     """Upload an ISO file for VM template creation"""
     orchestrator = get_orchestrator()
-    
+
     # Validate file
     if not file.filename or not file.filename.endswith(".iso"):
         raise HTTPException(status_code=400, detail="File must be an ISO image")
-    
+
     # Save to temporary location
     temp_dir = Path("/tmp/malinfo_uploads")
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_path = temp_dir / f"{uuid.uuid4()}.iso"
-    
+
     try:
         # Stream upload to disk
-        async with open(temp_path, "wb") as f:
+        async with temp_path.open("wb") as f:
             while chunk := await file.read(8192):
                 f.write(chunk)
-        
+
         # Register ISO
         result = await orchestrator.upload_iso(temp_path, os_type, os_version, name)
         return ISOUploadResponse(**result)
-        
+
     except Exception as e:
-        logger.error(f"ISO upload failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("ISO upload failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         # Cleanup temp file
         if temp_path.exists():
@@ -180,11 +184,12 @@ async def delete_iso(name: str):
 
 # ─── Template Management ───
 
+
 @router.post("/templates", response_model=TemplateResponse)
 async def create_template(request: TemplateCreateRequest):
     """Create a VM template from an ISO"""
     orchestrator = get_orchestrator()
-    
+
     try:
         template = await orchestrator.create_template(
             name=request.name,
@@ -215,10 +220,10 @@ async def create_template(request: TemplateCreateRequest):
             error=template.error,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        logger.error(f"Template creation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Template creation failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/templates", response_model=list[TemplateResponse])
@@ -291,31 +296,25 @@ async def rebuild_template(template_id: str):
     template = await orchestrator.get_template(template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
-    
+
     # Trigger rebuild in background
-    asyncio.create_task(orchestrator._build_template(template))
-    
+    _ = asyncio.create_task(orchestrator._build_template(template))
+
     return {"success": True, "message": "Template rebuild started"}
 
 
 # ─── Analysis Tasks ───
 
+
 @router.post("/analyze", response_model=AnalysisSubmitResponse)
 async def submit_analysis(request: AnalysisSubmitRequest):
     """Submit a sample for dynamic analysis"""
     orchestrator = get_orchestrator()
-    
-    # Verify sample exists
-    sample_path = Path(request.sample_id)  # This would be the stored sample path
-    # In real implementation, look up sample by ID from database
-    
-    # For now, assume sample_path is passed directly or look it up
-    # This is a simplified version
-    
+
     try:
         task = await orchestrator.submit_analysis(
             sample_id=request.sample_id,
-            sample_path=Path(request.sample_id),  # Would be actual path
+            sample_path=Path(request.sample_id),
             template_id=request.template_id,
             timeout=request.timeout,
             options=request.options,
@@ -328,10 +327,10 @@ async def submit_analysis(request: AnalysisSubmitRequest):
             created_at=task.created_at.isoformat(),
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        logger.error(f"Analysis submission failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Analysis submission failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/tasks", response_model=list[TaskStatusResponse])
@@ -369,20 +368,20 @@ async def cancel_task(task_id: str):
     task = await orchestrator.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     if task.state in (TaskState.COMPLETED, TaskState.FAILED):
         raise HTTPException(status_code=400, detail="Task already completed")
-    
+
     # Cancel the task
     if task.vm_instance_id:
         await orchestrator.destroy_instance(task.vm_instance_id)
-    
+
     task.state = TaskState.FAILED
     task.error = "Cancelled by user"
-    task.completed_at = datetime.utcnow()
+    task.completed_at = datetime.now(UTC)
     await orchestrator._save_results(task)
     await orchestrator._notify_task_update(task)
-    
+
     return {"success": True, "message": "Task cancelled"}
 
 
@@ -393,15 +392,14 @@ async def download_task_report(task_id: str, format: str = "json"):
     task = await orchestrator.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     if format == "json":
         return _task_to_detail_response(task)
-    elif format == "html":
+    if format == "html":
         # Generate HTML report
         html = _generate_html_report(task)
         return JSONResponse(content={"html": html})
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported format")
+    raise HTTPException(status_code=400, detail="Unsupported format")
 
 
 @router.get("/tasks/{task_id}/pcap")
@@ -411,7 +409,7 @@ async def download_pcap(task_id: str):
     task = await orchestrator.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     # PCAP would be stored with results
     pcap_path = orchestrator.storage_path / "analysis_results" / task_id / "capture.pcap"
     if pcap_path.exists():
@@ -431,27 +429,28 @@ async def get_screenshots(task_id: str):
 
 # ─── WebSocket for Real-time Updates ───
 
+
 @router.websocket("/ws/{task_id}")
 async def websocket_task_updates(websocket: WebSocket, task_id: str):
     """WebSocket endpoint for real-time task updates"""
     orchestrator = get_orchestrator()
-    
+
     # Verify task exists
     task = await orchestrator.get_task(task_id)
     if not task:
         await websocket.close(code=4004, reason="Task not found")
         return
-    
+
     await websocket.accept()
     orchestrator.register_websocket(task_id, websocket)
-    
+
     try:
         # Send initial state
         await websocket.send_json({
             "type": "initial_state",
             "task": _task_to_status_response(task).model_dump(),
         })
-        
+
         # Keep connection alive
         while True:
             # Wait for messages (ping/pong or client commands)
@@ -462,16 +461,17 @@ async def websocket_task_updates(websocket: WebSocket, task_id: str):
                     await websocket.send_json({"type": "pong"})
             except json.JSONDecodeError:
                 pass
-                
+
     except WebSocketDisconnect:
         pass
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+    except Exception:
+        logger.exception("WebSocket error")
     finally:
         orchestrator.unregister_websocket(task_id, websocket)
 
 
 # ─── Helper Functions ───
+
 
 def _task_to_status_response(task: AnalysisTask) -> TaskStatusResponse:
     """Convert task to status response"""
@@ -518,16 +518,14 @@ def _task_to_detail_response(task: AnalysisTask) -> TaskDetailResponse:
 
 def _generate_html_report(task: AnalysisTask) -> str:
     """Generate HTML report for task"""
-    from datetime import datetime
-    
     verdict_class = "unknown"
-    if task.malscore >= 80:
+    if task.malscore >= MALSCORE_CRITICAL:
         verdict_class = "malicious"
-    elif task.malscore >= 40:
+    elif task.malscore >= MALSCORE_HIGH:
         verdict_class = "suspicious"
-    elif task.malscore >= 20:
+    elif task.malscore >= MALSCORE_MEDIUM:
         verdict_class = "clean"
-    
+
     return f"""
     <!DOCTYPE html>
     <html>
@@ -536,7 +534,7 @@ def _generate_html_report(task: AnalysisTask) -> str:
         <style>
             body {{ font-family: 'IBM Plex Sans', sans-serif; background: #0a1220; color: #e9edf6; padding: 2rem; }}
             .header {{ border-bottom: 1px solid #253352; padding-bottom: 1rem; margin-bottom: 2rem; }}
-            .verdict {{ display: inline-block; width: 80px; height: 80px; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); 
+            .verdict {{ display: inline-block; width: 80px; height: 80px; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
                          display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px; }}
             .verdict.malicious {{ background: #4a201c; color: #e2493c; }}
             .verdict.suspicious {{ background: #4a3a1f; color: #e8a33d; }}
@@ -559,7 +557,7 @@ def _generate_html_report(task: AnalysisTask) -> str:
             <h1>Dynamic Analysis Report</h1>
             <p>Task ID: <code>{task.id}</code> | Sample: {task.sample_id} | Completed: {task.completed_at or 'N/A'}</p>
         </div>
-        
+
         <div class="section">
             <div style="display: flex; align-items: center; gap: 2rem;">
                 <div class="verdict {verdict_class}">{task.malscore}</div>
@@ -569,7 +567,7 @@ def _generate_html_report(task: AnalysisTask) -> str:
                 </div>
             </div>
         </div>
-        
+
         <div class="section">
             <h2>Summary Statistics</h2>
             <div class="stat-grid">
@@ -583,14 +581,14 @@ def _generate_html_report(task: AnalysisTask) -> str:
                 <div class="stat"><div class="stat-label">MITRE Techniques</div><div class="stat-value">{len(task.mitre_techniques)}</div></div>
             </div>
         </div>
-        
+
         <div class="section">
             <h2>MITRE ATT&CK Techniques</h2>
             <div>
                 {''.join(f'<span class="mitre-tag">{t}</span>' for t in task.mitre_techniques) or '<span style="color:#8fa0c2;">None detected</span>'}
             </div>
         </div>
-        
+
         <div class="section">
             <h2>Signatures Triggered</h2>
             <table>
@@ -600,12 +598,12 @@ def _generate_html_report(task: AnalysisTask) -> str:
                 </tbody>
             </table>
         </div>
-        
+
         <div class="section">
             <h2>Process Tree</h2>
             <pre style="background: #0a1220; padding: 1rem; border-radius: 4px; overflow-x: auto;">{json.dumps(task.process_tree, indent=2)}</pre>
         </div>
-        
+
         <div class="section">
             <h2>Network Events</h2>
             <table>
@@ -618,9 +616,3 @@ def _generate_html_report(task: AnalysisTask) -> str:
     </body>
     </html>
     """
-
-
-# Import needed modules
-import asyncio
-import json
-from datetime import datetime

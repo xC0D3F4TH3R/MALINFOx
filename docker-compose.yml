@@ -8,6 +8,8 @@ version: "3.9"
 # that is real virtualization infrastructure that must be provisioned
 # separately per backend/app/sandbox/README.md, then pointed to via
 # SANDBOX_API_URL in .env.
+#
+# For production, use docker-compose.prod.yml with: docker compose -f docker-compose.prod.yml up -d --build
 
 services:
   db:
@@ -19,20 +21,44 @@ services:
       POSTGRES_DB: malinfo
     volumes:
       - malinfo_db_data:/var/lib/postgresql/data
+      - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U malinfo"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - malinfo_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://malinfo:${POSTGRES_PASSWORD}@db:5432/malinfo
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - malinfo_storage:/app/storage
@@ -47,32 +73,46 @@ services:
       - CAP_SYS_RESOURCE
     security_opt:
       - apparmor:unconfined
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2"
+        reservations:
+          memory: 2G
+          cpus: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
       - "80:80"
-      # Terminate real TLS here in production (443:443 + certs), see
-      # deploy/nginx.conf comments for the certbot / cert-manager notes.
+      - "443:443"
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
       - ./frontend:/usr/share/nginx/html:ro
+      - malinfo_storage:/app/storage:ro
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
 volumes:
   malinfo_db_data:
+  malinfo_redis_data:
   malinfo_storage:
 
-# ------------------------------------------------------------------------
-# NOT included here (deliberately — these are separate infrastructure):
-#
-#   cape-controller:   The CAPEv2 dynamic-sandbox cluster. Deploy per
-#                       backend/app/sandbox/README.md, then set
-#                       SANDBOX_API_URL + SANDBOX_ENABLED=true in .env.
-#
-#   inetsim / fakenet: Simulated-internet services for safe malware
-#                       detonation — run alongside the CAPEv2 guest VMs,
-#                       not as part of this application stack.
-# ------------------------------------------------------------------------
+networks:
+  default:
+    name: malinfo-network

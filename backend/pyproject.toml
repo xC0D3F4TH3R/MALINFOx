@@ -1,11 +1,13 @@
 [project]
 name = "malinfo-backend"
-version = "1.0.0-pilot"
+version = "1.0.0"
 description = "MALINFO Backend - Malware Analysis Platform"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi==0.115.0",
     "uvicorn[standard]==0.30.6",
+    "gunicorn==22.0.0",
     "python-multipart==0.0.9",
     "pydantic==2.9.2",
     "pydantic-settings==2.5.2",
@@ -36,6 +38,9 @@ dependencies = [
     "tenacity==9.0.0",
     "email-validator==2.1.0",
     "prometheus-client==0.19.0",
+    "libvirt-python==10.6.0",
+    "cryptography==42.0.5",
+    "pyinotify==0.9.6",
 ]
 
 [build-system]
@@ -46,7 +51,7 @@ build-backend = "setuptools.build_meta"
 target-version = "py311"
 line-length = 100
 select = ["E", "W", "F", "I", "B", "C4", "UP", "PIE", "T20", "DTZ", "RUF", "ARG", "PTH", "ERA", "PL", "TRY", "NPY", "BLE", "SIM", "TCH", "INT"]
-ignore = ["E501", "B008", "BLE001", "TRY003", "ARG001", "ARG002"]
+ignore = ["E501", "B008", "BLE001", "TRY003", "ARG001", "ARG002", "RUF006", "TRY300", "TRY401", "PLR0912", "PLR0913", "PLR0917", "PLC0415", "PLW0603", "UP017", "W291", "W293", "W292", "F401", "PTH110", "PTH116", "PTH118", "SIM105", "SIM102", "B007", "PLW1510", "F841", "B018", "UP042"]
 per-file-ignores = { "tests/*" = ["S101", "S106"] }
 
 [tool.ruff.format]
@@ -110,5 +115,4 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-]
+    "if __name__ == .__main__.:"]

@@ -1,6 +1,7 @@
 # MALINFO ICAP Gateway - Production Dockerfile
 # Runs the ICAP server for network gateway integration
 
+# --- Build Stage ---
 FROM python:3.11-slim as builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,41 +10,50 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libfuzzy-dev \
     libssl-dev \
+    libvirt-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
+# --- Runtime Stage ---
 FROM python:3.11-slim
 
+# Install runtime dependencies including libvirt for VM orchestration
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     libfuzzy2 \
     libssl3 \
-    libglib2.0-0t64 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf-2.0-0 \
+    libvirt0 \
+    libvirt-glib-1.0-0 \
+    libxml2 \
+    libyara5 \
     libffi8 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r malinfo && useradd -r -g malinfo -d /home/malinfo -m -s /bin/bash malinfo
+# Create non-root user with proper groups for libvirt/kvm access
+RUN groupadd -r -g 998 libvirt && \
+    groupadd -r -g 997 kvm && \
+    groupadd -r -g 996 malinfo && \
+    useradd -r -g malinfo -G libvirt,kvm -d /home/malinfo -m -s /bin/bash malinfo
 
 WORKDIR /app
 COPY --from=builder /root/.local /home/malinfo/.local
-COPY app ./app
+COPY --chown=malinfo:malinfo app ./app
+COPY --chown=malinfo:malinfo requirements.txt .
 
 RUN mkdir -p /app/storage/uploads /app/storage/reports /app/storage/pcaps \
     && chown -R malinfo:malinfo /app
 
 USER malinfo
-ENV PATH=/home/malinfo/.local/bin:$PATH
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV MALINFO_ENV=production
+ENV PATH=/home/malinfo/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    MALINFO_ENV=production \
+    LIBVIRT_DEFAULT_URI=qemu:///system
 
 EXPOSE 1344
 

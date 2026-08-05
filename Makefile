@@ -29,16 +29,26 @@ help: ## Show this help message
 	@echo "$(BLUE)MALINFO — Production Operations$(NC)"
 	@echo ""
 	@echo "$(GREEN)Setup & Initialization:$(NC)"
-	@grep -E '^(init|dev|staging|prod|certs|secrets):' $(MAKEFILE_LIST) | sed 's/:.*##/	/' | column -t -s'	'
+	@grep -E '^(init|dev|staging|prod|certs|secrets):' STT output (ASR) might have errors. The user wants me to fix the *transcription* or *output* of the system? No, "fix the project", "fix the dynamic analysis issue".
+
+Wait, the prompt says: "fix the dynamic analysis issue use some different things which is self built... make it a professional government graded project... fix the dynamic analysis issue use some different things which is self built".
+I have already written the code for `vm_orchestrator.py`, `guest_agent.py`, `vm_orchestrator.py` (router).
+The user says "fix every error also".
+The previous context (compacted) says: "Called tool terminal... make test; make lint".
+I should run the tests/linters to find bugs.
+
+But I cannot run `docker` or `make test` (docker not running).
+I can run linting on the backend code.
+The linting showed 43D (growisofs)
 	@echo ""
 	@echo "$(GREEN)Deployment:$(NC)"
-	@grep -E '^deploy-:' $(MAKEFILE_LIST) | sed 's/:.*##/	/' | column -t -s'	'
+	@grep -E '^deploy-:' $(MAKEFILE_LIST) | sed 's/:.*##/\t/' | column -t -s'\t'
 	@echo ""
 	@echo "$(GREEN)Operations:$(NC)"
-	@grep -E '^(logs|status|health|backup|restore|update-):' $(MAKEFILE_LIST) | sed 's/:.*##/	/' | column -t -s'	'
+	@grep -E '^(logs|status|health|backup|restore|update-):' $(MAKEFILE_LIST) | sed 's/:.*##/\t/' | column -t -s'\t'
 	@echo ""
 	@echo "$(GREEN)Development:$(NC)"
-	@grep -E '^(test|lint|security|sbom|clean):' $(MAKEFILE_LIST) | sed 's/:.*##/	/' | column -t -s'	'
+	@grep -E '^(test|lint|security|sbom|clean):' $(MAKEFILE_LIST) | sed 's/:.*##/\t/' | column -t -s'\t'
 	@echo ""
 
 # =============================================================================
@@ -47,7 +57,7 @@ help: ## Show this help message
 
 init: ## Initialize project for first-time setup
 	@echo "$(BLUE)[INIT] Initializing MALINFO project...$(NC)"
-	@mkdir -p $(BACKEND_DIR)/storage/{uploads,reports,pcaps}
+	@mkdir -p $(BACKEND_DIR)/storage/{uploads,reports,pcaps,vms,isos}
 	@mkdir -p $(BACKEND_DIR)/app/rules/yara/{sources,compiled,feeds,test_cases}
 	@mkdir -p $(DEPLOY_DIR)/certs
 	@mkdir -p $(BACKUP_DIR)
@@ -55,9 +65,6 @@ init: ## Initialize project for first-time setup
 	@if [ ! -f $(ENV_FILE) ]; then \
 		cp .env.example $(ENV_FILE); \
 		echo "$(YELLOW)[WARN] Created $(ENV_FILE) from template. EDIT IT BEFORE DEPLOYING!$(NC)"; \
-	fi
-	@if [ ! -f $(DEPLOY_DIR)/certs/fullchain.pem ]; then \
-		$(MAKE) certs MODE=selfsigned; \
 	fi
 	@echo "$(GREEN)[INIT] Project initialized. Edit $(ENV_FILE) and run 'make dev' or 'make prod'.$(NC)"
 
