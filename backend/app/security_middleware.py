@@ -15,12 +15,12 @@ from urllib.parse import urlparse
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
-
-from app.config import settings
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
+    from starlette.types import ASGIApp
+
+from app.config import settings
 
 logger = logging.getLogger("malinfo.security")
 
@@ -85,7 +85,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     CSRF protection using double-submit cookie pattern.
     """
 
-    def __init__(self, app: ASGIApp, excluded_paths: list[str] = None):
+    def __init__(self, app: ASGIApp, excluded_paths: list[str] | None = None):
         super().__init__(app)
         self.excluded_paths = excluded_paths or [
             "/api/health",
@@ -131,7 +131,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Redis-backed rate limiting with configurable windows.
     """
 
-    def __init__(self, app: ASGIApp, redis_client: "Redis" = None):
+    def __init__(self, app: ASGIApp, redis_client: Redis | None = None):
         super().__init__(app)
         self.redis = redis_client
         self.default_limit = 100

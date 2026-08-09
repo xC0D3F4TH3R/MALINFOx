@@ -11,9 +11,6 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-if TYPE_CHECKING:
-    pass
-
 logger = logging.getLogger("malinfo.auth.password")
 
 # Common weak passwords (top 1000 most common)
@@ -70,10 +67,7 @@ def calculate_entropy(password: str) -> float:
 def has_keyboard_pattern(password: str) -> bool:
     """Check if password contains keyboard patterns."""
     lower = password.lower()
-    for pattern in KEYBOARD_PATTERNS:
-        if pattern in lower:
-            return True
-    return False
+    return any(pattern in lower for pattern in KEYBOARD_PATTERNS)
 
 
 def has_repeated_chars(password: str, max_repeat: int = 3) -> bool:

@@ -307,10 +307,10 @@ def decode_token(token: str) -> dict:
     """Decode and validate JWT token."""
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.ExpiredSignatureError as err:
+        raise HTTPException(status_code=401, detail="Token expired") from err
+    except jwt.InvalidTokenError as err:
+        raise HTTPException(status_code=401, detail="Invalid token") from err
 
 
 # =============================================================================
@@ -877,10 +877,8 @@ async def get_api_key(
             "API key used during rotation transition period",
             extra={"api_key_id": api_key.id, "user_id": api_key.user_id}
         )
-    else:
-        # Check current key expiry
-        if api_key.expires_at and api_key.expires_at < datetime.utcnow():
-            raise HTTPException(status_code=401, detail="API key expired")
+    elif api_key.expires_at and api_key.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="API key expired")
 
     # Update last used
     api_key.last_used = datetime.utcnow()
