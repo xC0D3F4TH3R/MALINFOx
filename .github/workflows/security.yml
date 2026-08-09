@@ -231,6 +231,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           timeout: 1800
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
   # Deploy to staging
   deploy-staging:
