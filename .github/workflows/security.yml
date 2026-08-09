@@ -142,7 +142,7 @@ jobs:
 
       - name: Build backend image
         run: |
-          docker build -t malinfo-backend:test backend/
+          docker build --no-cache -t malinfo-backend:test backend/
         continue-on-error: true
 
       - name: Run Trivy (Container vulnerability scan)
@@ -233,6 +233,7 @@ jobs:
           timeout: 1800
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
+          no-cache: true
 
   # Deploy to staging
   deploy-staging:
