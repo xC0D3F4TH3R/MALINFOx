@@ -233,6 +233,7 @@ jobs:
           timeout: 1800
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            CACHE_BUST=${{ github.run_id }}
           no-cache: true
 
   # Deploy to staging
