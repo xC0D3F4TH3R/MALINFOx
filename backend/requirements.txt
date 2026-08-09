@@ -30,7 +30,7 @@ scapy==2.6.0                # PCAP parsing / packet crafting
 dnspython==2.6.1
 
 # --- Log Analysis ---------------------------------------------------------
-python-evtx==0.11.0         # Windows EVTX log parsing
+python-evtx==0.8.1         # Windows EVTX log parsing
 
 # --- Threat intel enrichment (optional, needs API keys) -------------------
 requests==2.32.3
