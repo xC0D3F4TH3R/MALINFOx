@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libvirt-dev \
     pkg-config \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -36,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvirt0 \
     libvirt-glib-1.0-0 \
     libxml2 \
-    libyara5 \
+    yara \
     libffi8 \
     ca-certificates \
     dumb-init \
