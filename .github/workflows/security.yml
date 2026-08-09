@@ -191,6 +191,7 @@ jobs:
     needs: [security-scan, code-quality, docker-security]
     runs-on: ubuntu-latest
     continue-on-error: true
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -229,6 +230,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          timeout: 1800
 
   # Deploy to staging
   deploy-staging:
