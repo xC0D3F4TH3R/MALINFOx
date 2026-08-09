@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/xC0D3F4TH3R/MALINFOx">
-    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/banner.png" alt="MALINFO Banner" width="100%"/>
+    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/banner.svg" alt="MALINFO Banner" width="100%"/>
   </a>
 </p>
 
@@ -121,7 +121,7 @@ graph TB
 
 | Dashboard | VM Sandbox | Agency Reports |
 |:---------:|:----------:|:--------------:|
-| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-dashboard.gif) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-vm-sandbox.gif) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-agency-report.gif) |
+| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-dashboard.svg) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-vm-sandbox.svg) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-agency-report.svg) |
 | *Real-time analyst dashboard* | *VM template → analysis → monitoring* | *Auto-formatted gov reports* |
 
 </div>
@@ -495,7 +495,7 @@ SystemCallErrorNumber=EPERM
 ## 📈 Monitoring & Observability
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/grafana-dashboard.png" alt="Grafana Dashboard" width="95%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/grafana-dashboard.svg" alt="Grafana Dashboard" width="95%"/>
 </div>
 
 ### Pre-Provisioned Grafana Dashboards
@@ -622,11 +622,11 @@ Place these files in `/assets` for the best README experience:
 | File | Description | Size |
 |------|-------------|------|
 | `logo.svg` | Custom MALINFO logo (vector) | 220px wide |
-| `banner.png` | Hero banner with tagline | 1200×400 |
-| `demo-dashboard.gif` | Dashboard live analysis | 800×450 |
-| `demo-vm-sandbox.gif` | VM creation → analysis | 800×450 |
-| `demo-agency-report.gif` | Email generation flow | 800×450 |
-| `grafana-dashboard.png` | Grafana screenshots | 1200×600 |
+| `banner.svg` | Hero banner with tagline | 1200×400 |
+| `demo-dashboard.svg` | Dashboard live analysis | 800×450 |
+| `demo-vm-sandbox.svg` | VM creation → analysis | 800×450 |
+| `demo-agency-report.svg` | Email generation flow | 800×450 |
+| `grafana-dashboard.svg` | Grafana screenshots | 1200×600 |
 | `footer.svg` | Footer branding | 600×100 |
 
 ---
