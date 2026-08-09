@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <defs>
+    <linearGradient id="demoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#161b22;stop-opacity:1" />
+    </linearGradient>
+    <filter id="demoGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="emailGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f85149;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a371f7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="800" height="450" fill="url(#demoBg)"/>
+  
+  <!-- Grid -->
+  <g stroke="#f85149" stroke-width="0.5" opacity="0.1">
+    <line x1="0" y1="0" x2="800" y2="450"/>
+    <line x1="800" y1="0" x2="0" y2="450"/>
+  </g>
+  
+  <!-- Email generation flow -->
+  <g transform="translate(400, 225)" filter="url(#demoGlow)">
+    <!-- Report Submission -->
+    <rect x="-320" y="-120" width="200" height="70" rx="8" fill="#161b22" stroke="#f85149" stroke-width="2" opacity="0.9"/>
+    <text x="-220" y="-90" font-family="system-ui" font-size="14" font-weight="700" fill="#f85149" text-anchor="middle">📥 Citizen Report</text>
+    <text x="-220" y="-68" font-family="system-ui" font-size="11" fill="#8b949e" text-anchor="middle">File / URL / IP / App</text>
+    <text x="-220" y="-50" font-family="system-ui" font-size="10" fill="#58a6ff" text-anchor="middle">Anonymous or identified</text>
+    
+    <!-- Arrow 1 -->
+    <path d="M-120 -85 L-50 -85" stroke="url(#emailGrad)" stroke-width="3" fill="none" marker-end="url(#arrowhead2)"/>
+    <defs>
+      <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="url(#emailGrad)"/>
+      </marker>
+    </defs>
+    
+    <!-- Auto Analysis -->
+    <rect x="0" y="-120" width="200" height="70" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="2" opacity="0.9"/>
+    <text x="100" y="-90" font-family="system-ui" font-size="14" font-weight="700" fill="#58a6ff" text-anchor="middle">⚡ Auto Analysis</text>
+    <text x="100" y="-68" font-family="system-ui" font-size="11" fill="#8b949e" text-anchor="middle">Static + Dynamic + Network</text>
+    <text x="100" y="-50" font-family="system-ui" font-size="10" fill="#3fb950" text-anchor="middle">MITRE ATT&CK mapping</text>
+    
+    <!-- Arrow 2 -->
+    <path d="M200 -85 L270 -85" stroke="url(#emailGrad)" stroke-width="3" fill="none" marker-end="url(#arrowhead2)"/>
+    
+    <!-- Email Generation -->
+    <rect x="320" y="-120" width="220" height="70" rx="8" fill="#161b22" stroke="#f0883e" stroke-width="2" opacity="0.9"/>
+    <text x="430" y="-90" font-family="system-ui" font-size="14" font-weight="700" fill="#f0883e" text-anchor="middle">📧 Email Generation</text>
+    <text x="430" y="-68" font-family="system-ui" font-size="11" fill="#8b949e" text-anchor="middle">Formal Government Format</text>
+    <text x="430" y="-50" font-family="system-ui" font-size="10" fill="#f85149" text-anchor="middle">Reference: MALINFO-ABC123</text>
+    
+    <!-- Arrow 3 (split) -->
+    <path d="M430 -85 L430 -40 L430 0" stroke="url(#emailGrad)" stroke-width="3" fill="none" marker-end="url(#arrowhead2)"/>
+    
+    <!-- 4 Agencies -->
+    <g transform="translate(-80, 80)">
+      <!-- CERT-In -->
+      <rect x="-240" y="0" width="200" height="80" rx="8" fill="#161b22" stroke="#f85149" stroke-width="2" opacity="0.9"/>
+      <text x="-140" y="25" font-family="system-ui" font-size="13" font-weight="700" fill="#f85149" text-anchor="middle">🇮🇳 CERT-In</text>
+      <text x="-140" y="45" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Priority: CRITICAL</text>
+      <text x="-140" y="62" font-family="system-ui" font-size="9" fill="#58a6ff" text-anchor="middle">incident@cert-in.org.in</text>
+      
+      <!-- Cyber Crime -->
+      <rect x="-10" y="0" width="200" height="80" rx="8" fill="#161b22" stroke="#f85149" stroke-width="2" opacity="0.9"/>
+      <text x="90" y="25" font-family="system-ui" font-size="13" font-weight="700" fill="#f85149" text-anchor="middle">🚔 Cyber Crime Portal</text>
+      <text x="90" y="45" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Priority: CRITICAL</text>
+      <text x="90" y="62" font-family="system-ui" font-size="9" fill="#58a6ff" text-anchor="middle">cybercrime@gov.in</text>
+      
+      <!-- State Cell -->
+      <rect x="220" y="0" width="200" height="80" rx="8" fill="#161b22" stroke="#ff6b35" stroke-width="2" opacity="0.9"/>
+      <text x="320" y="25" font-family="system-ui" font-size="13" font-weight="700" fill="#ff6b35" text-anchor="middle">🏛️ State Cyber Cell</text>
+      <text x="320" y="45" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Priority: HIGH</text>
+      <text x="320" y="62" font-family="system-ui" font-size="9" fill="#58a6ff" text-anchor="middle">cybercell@police.gov.in</text>
+      
+      <!-- Central -->
+      <rect x="450" y="0" width="200" height="80" rx="8" fill="#161b22" stroke="#a371f7" stroke-width="2" opacity="0.9"/>
+      <text x="550" y="25" font-family="system-ui" font-size="13" font-weight="700" fill="#a371f7" text-anchor="middle">📊 MALINFO Central</text>
+      <text x="550" y="45" font-family="system-ui" font-size="10" fill="#8b949e" text-anchor="middle">Priority: HIGH</text>
+      <text x="550" y="62" font-family="system-ui" font-size="9" fill="#58a6ff" text-anchor="middle">ary4ntom4r@gmail.com</text>
+    </g>
+    
+    <!-- Email preview box -->
+    <rect x="-320" y="180" width="700" height="200" rx="8" fill="#0d1117" stroke="#30363d" stroke-width="1" opacity="0.9"/>
+    <text x="20" y="205" font-family="monospace" font-size="11" fill="#8b949e" text-anchor="start">
+      ═════════════════════════════════════════════════════════════════════════════════════
+      MALINFO INCIDENT REPORT
+      ══════════════════════════════════════════════════════════════════════════════════════
+      
+      Report Reference: MALINFO-ABC12345
+      Agency: CERT-In (Indian Computer Emergency Response Team)
+      Date/Time (UTC): 2026-08-05 10:56:55
+      Report ID: abc123
+      
+      INCIDENT CLASSIFICATION
+      ----------------------------------------
+      Type: FILE                    Severity: HIGH
+      Risk Score: 85/100            Verdict: malicious
+      
+      FILE INFORMATION
+      ----------------------------------------
+      Filename: malware.exe
+      Size: 102400 bytes
+      SHA256: d41d8cd98f00b204e9800998ecf8427e
+      MD5:    d41d8cd98f00b204e9800998ecf8427e
+      
+      INDICATORS OF COMPROMISE (IOCs)
+      ----------------------------------------
+      • HASH: d41d8cd98f00b204e9800998ecf8427e (Confidence: 0.9)
+      • IP:   192.168.1.100 (Confidence: 0.8)
+      
+      MITRE ATT&CK TECHNIQUES
+      ----------------------------------------
+      • T1486 — Data Encrypted for Impact
+      • T1059 — Command and Scripting Interpreter
+      • T1566 — Phishing
+      
+      RECOMMENDED ACTIONS
+      ----------------------------------------
+      1. Isolate affected system immediately
+      2. Block C2 IP at firewall
+      3. Initiate incident response procedure
+      
+      ═══════════════════════════════════════════════════════════════════════════════════════════
+      END OF REPORT
+      Generated by MALINFO Platform at 2026-08-05 05:26:55 UTC
+    </text>
+  </g>
+  
+  <!-- Title -->
+  <text x="400" y="40" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="24" 
+        font-weight="700" 
+        fill="#f85149" 
+        text-anchor="middle"
+        filter="url(#demoGlow)">
+    📧 Agency Notification Demo Placeholder
+  </text>
+  
+  <!-- Recording indicator -->
+  <g transform="translate(400, 380)">
+    <circle r="12" fill="#f85149" opacity="0.3">
+      <animate attributeName="r" values="12;16;12" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="8" fill="#f85149">
+      <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <text x="0" y="35" font-family="monospace" font-size="12" fill="#f85149" text-anchor="middle" font-weight="bold">● REC</text>
+  </g>
+  
+  <!-- Bottom note -->
+  <text x="400" y="430" font-family="system-ui" font-size="10" fill="#484f58" text-anchor="middle">Replace with real GIF: assets/demo-agency-report.gif</text>
+</svg>

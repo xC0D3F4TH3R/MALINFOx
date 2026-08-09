@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#161b22;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a371f7;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="200" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle grid pattern -->
+  <g stroke="#58a6ff" stroke-width="0.3" opacity="0.1">
+    <line x1="0" y1="0" x2="400" y2="200"/>
+    <line x1="400" y1="0" x2="0" y2="200"/>
+  </g>
+  
+  <!-- Shield shape -->
+  <path d="M200 30 
+           C200 30, 200 20, 200 20
+           L350 50
+           C350 50, 360 60, 350 80
+           L200 170
+           L50 80
+           C40 60, 50 50, 50 50
+           L200 20
+           Z" 
+        fill="url(#shieldGrad)" 
+        filter="url(#glow)"
+        stroke="#ffffff"
+        stroke-width="2"
+        opacity="0.95"/>
+  
+  <!-- Circuit pattern inside shield -->
+  <g stroke="#ffffff" stroke-width="1.5" fill="none" opacity="0.8">
+    <path d="M200 50 L200 90 M170 70 L230 70"/>
+    <circle cx="200" cy="70" r="25" opacity="0.3"/>
+    <path d="M180 100 Q200 120 220 100" stroke-linecap="round"/>
+    <circle cx="170" cy="70" r="4" fill="#58a6ff"/>
+    <circle cx="230" cy="70" r="4" fill="#a371f7"/>
+    <circle cx="200" cy="50" r="4" fill="#3fb950"/>
+    <circle cx="200" cy="90" r="4" fill="#f85149"/>
+  </g>
+  
+  <!-- Binary code accents -->
+  <g font-family="monospace" font-size="10" fill="#58a6ff" opacity="0.3">
+    <text x="30" y="35">101010</text>
+    <text x="340" y="175">010101</text>
+    <text x="45" y="185">110011</text>
+    <text x="335" y="25">001100</text>
+  </g>
+  
+  <!-- Text -->
+  <text x="200" y="190" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="16" 
+        font-weight="700" 
+        fill="#58a6ff" 
+        text-anchor="middle"
+        letter-spacing="4">
+    MALINFO
+  </text>
+</svg>

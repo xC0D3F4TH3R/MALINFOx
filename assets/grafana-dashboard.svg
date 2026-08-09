@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
+  <defs>
+    <linearGradient id="grafanaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#161b22;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
+    </linearGradient>
+    <filter id="grafanaGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="1200" height="600" fill="url(#grafanaBg)"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="1200" height="60" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="20" y="40" font-family="system-ui" font-size="18" font-weight="700" fill="#58a6ff">Grafana  ▲  MALINFO Dashboards</text>
+  <text x="1100" y="40" font-family="system-ui" font-size="12" fill="#8b949e" text-anchor="end">Last 6h ▼  Auto-refresh: 30s</text>
+  
+  <!-- Dashboard Row 1: System Overview -->
+  <g transform="translate(20, 80)">
+    <rect x="0" y="0" width="380" height="240" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" filter="url(#grafanaGlow)"/>
+    <text x="20" y="30" font-family="system-ui" font-size="16" font-weight="700" fill="#58a6ff">📊 System Overview</text>
+    
+    <!-- Sparkline placeholders -->
+    <g font-family="monospace" font-size="12" fill="#8b949e">
+      <text x="20" y="70">CPU Usage    ████████░░  72%</text>
+      <text x="20" y="95">Memory       ██████████░  85%</text>
+      <text x="20" y="120">Disk         █████░░░░░  45%</text>
+      <text x="20" y="145">Network In   ████░░░░░░  1.2 Gbps</text>
+      <text x="20" y="170">Network Out  ███░░░░░░░  800 Mbps</text>
+      <text x="20" y="195">TLS Expiry   247 days</text>
+    </g>
+    
+    <!-- Mini chart -->
+    <path d="M20 210 Q80 150 140 180 Q200 160 260 140 Q320 120 360 130" stroke="#58a6ff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    <text x="20" y="230" font-family="system-ui" font-size="11" fill="#484f58">API Requests/sec (last 6h)</text>
+  </g>
+  
+  <!-- Dashboard Row 1: Analysis Pipeline -->
+  <g transform="translate(420, 80)">
+    <rect x="0" y="0" width="380" height="240" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" filter="url(#grafanaGlow)"/>
+    <text x="20" y="30" font-family="system-ui" font-size="16" font-weight="700" fill="#f0883e">☁️ Analysis Pipeline</text>
+    
+    <g font-family="monospace" font-size="12" fill="#8b949e">
+      <text x="20" y="70">Queue Depth        ████████░░  78/100</text>
+      <text x="20" y="95">Static Avg         ██████████  2.3s</text>
+      <text x="20" y="120">Dynamic Avg        ████████░░  3.1m</text>
+      <text x="20" y="145">Verdict: Clean     ████████░░  42%</text>
+      <text x="20" y="170">Verdict: Suspicious████░░░░░░  28%</text>
+      <text x="20" y="195">Verdict: Malicious ████░░░░░░  30%</text>
+    </g>
+    
+    <!-- Pie chart placeholder -->
+    <circle cx="300" cy="200" r="30" fill="none" stroke="#3fb950" stroke-width="12" stroke-dasharray="94.2 94.2" stroke-dashoffset="0"/>
+    <circle cx="300" cy="200" r="30" fill="none" stroke="#f85149" stroke-width="12" stroke-dasharray="94.2 94.2" stroke-dashoffset="94.2"/>
+    <circle cx="300" cy="200" r="30" fill="none" stroke="#f0883e" stroke-width="12" stroke-dasharray="94.2 94.2" stroke-dashoffset="188.4"/>
+    <text x="300" y="205" font-family="system-ui" font-size="14" font-weight="700" fill="#58a6ff" text-anchor="middle">42/28/30</text>
+  </g>
+  
+  <!-- Dashboard Row 1: Sandbox Status -->
+  <g transform="translate(820, 80)">
+    <rect x="0" y="0" width="360" height="240" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" filter="url(#grafanaGlow)"/>
+    <text x="20" y="30" font-family="system-ui" font-size="16" font-weight="700" fill="#a371f7">🧠 Sandbox Status</text>
+    
+    <g font-family="monospace" font-size="12" fill="#8b949e">
+      <text x="20" y="70">Templates Ready    ██████████  8/8</text>
+      <text x="20" y="95">Instances Active   ████░░░░░░  4/16</text>
+      <text x="20" y="120">Tasks Queued       ███░░░░░░░  12</text>
+      <text x="20" y="145">MalScore Avg       ██████░░░░  54/100</text>
+      <text x="20" y="170">Guest Agent Health ██████████  100%</text>
+      <text x="20" y="195">Last Analysis      2m ago</text>
+    </g>
+    
+    <!-- Bar chart -->
+    <g transform="translate(20, 210)">
+      <rect x="0" y="0" width="40" height="-60" rx="2" fill="#58a6ff"/>
+      <rect x="60" y="0" width="40" height="-100" rx="2" fill="#f0883e"/>
+      <rect x="120" y="0" width="40" height="-140" rx="2" fill="#a371f7"/>
+      <rect x="180" y="0" width="40" height="-80" rx="2" fill="#3fb950"/>
+      <rect x="240" y="0" width="40" height="-160" rx="2" fill="#f85149"/>
+      <text x="20" y="20" font-family="system-ui" font-size="10" fill="#58a6ff" text-anchor="middle">Win10</text>
+      <text x="80" y="20" font-family="system-ui" font-size="10" fill="#f0883e" text-anchor="middle">Ubuntu</text>
+      <text x="140" y="20" font-family="system-ui" font-size="10" fill="#a371f7" text-anchor="middle">Android</text>
+      <text x="200" y="20" font-family="system-ui" font-size="10" fill="#3fb950" text-anchor="middle">macOS</text>
+      <text x="260" y="20" font-family="system-ui" font-size="10" fill="#f85149" text-anchor="middle">Other</text>
+    </g>
+  </g>
+  
+  <!-- Dashboard Row 2: MITRE Heatmap -->
+  <g transform="translate(20, 340)">
+    <rect x="0" y="0" width="780" height="240" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" filter="url(#grafanaGlow)"/>
+    <text x="20" y="30" font-family="system-ui" font-size="16" font-weight="700" fill="#58a6ff">🎯 MITRE ATT&CK Heatmap (Last 1000 Samples)</text>
+    
+    <!-- Heatmap grid -->
+    <g font-family="monospace" font-size="10">
+      <text x="20" y="55" fill="#8b949e">T1486 ████████████████████████████  847</text>
+      <text x="20" y="75" fill="#8b949e">T1059 ██████████████████████████░░  712</text>
+      <text x="20" y="95" fill="#8b949e">T1566 ██████████████████████░░░░░  634</text>
+      <text x="20" y="115" fill="#8b949e">T1055 █████████████████████░░░░░░  587</text>
+      <text x="20" y="135" fill="#8b949e">T1027 ████████████████████░░░░░░░  523</text>
+      <text x="20" y="155" fill="#8b949e">T1003 ███████████████████░░░░░░░░  489</text>
+      <text x="20" y="175" fill="#8b949e">T1071 ██████████████████░░░░░░░░░  456</text>
+      <text x="20" y="195" fill="#8b949e">T1105 ██████████████████░░░░░░░░░  432</text>
+      <text x="20" y="215" fill="#8b949e">T1082 █████████████████░░░░░░░░░░  401</text>
+      <text x="20" y="235" fill="#8b949e">T1112 ████████████████░░░░░░░░░░░  378</text>
+    </g>
+  </g>
+  
+  <!-- Dashboard Row 2: YARA Performance -->
+  <g transform="translate(820, 340)">
+    <rect x="0" y="0" width="360" height="240" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" filter="url(#grafanaGlow)"/>
+    <text x="20" y="30" font-family="system-ui" font-size="16" font-weight="700" fill="#3fb950">📏 YARA Performance</text>
+    
+    <g font-family="monospace" font-size="12" fill="#8b949e">
+      <text x="20" y="70">Rules Loaded       47,231</text>
+      <text x="20" y="95">Scan Time (10MB)   1.8s avg</text>
+      <text x="20" y="120">Matches/sec        12,400</text>
+      <text x="20" y="145">Top Rule: RAT_     342 hits</text>
+      <text x="20" y="170">Top Rule: CRYPTER  287 hits</text>
+      <text x="20" y="195">Top Rule: MINER    198 hits</text>
+    </g>
+    
+    <!-- Line chart -->
+    <path d="M20 210 Q60 180 100 160 Q140 140 180 150 Q220 130 260 140 Q300 120 320 130" stroke="#3fb950" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    <text x="20" y="230" font-family="system-ui" font-size="11" fill="#484f58">Scan Duration (last 24h)</text>
+  </g>
+  
+  <!-- Footer -->
+  <text x="600" y="590" font-family="system-ui" font-size="11" fill="#484f58" text-anchor="middle">MALINFO v2.0.0 · Grafana Dashboards · Replace with real screenshot: assets/grafana-dashboard.png</text>
+</svg>

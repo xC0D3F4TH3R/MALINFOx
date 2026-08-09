@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 100" width="600" height="100">
+  <defs>
+    <linearGradient id="footerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#a371f7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0883e;stop-opacity:1" />
+    </linearGradient>
+    <filter id="footerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="600" height="100" fill="#0d1117"/>
+  
+  <!-- Animated line -->
+  <line x1="0" y1="0" x2="600" y2="0" stroke="url(#footerGrad)" stroke-width="2">
+    <animate attributeName="stroke-dashoffset" values="0;-600" dur="10s" repeatCount="indefinite"/>
+  </line>
+  
+  <g transform="translate(300, 50)">
+    <!-- Shield icon -->
+    <path d="M0 -25 
+             C0 -25, 0 -30, 0 -30
+             L45 -10
+             C45 -10, 50 -5, 45 0
+             L0 30
+             L-45 0
+             C-50 -5, -45 -10, -45 -10
+             L0 -30
+             Z" 
+          fill="none" 
+          stroke="url(#footerGrad)" 
+          stroke-width="2"
+          filter="url(#footerGlow)"
+          opacity="0.8"/>
+    
+    <text x="0" y="55" 
+          font-family="system-ui, -apple-system, sans-serif" 
+          font-size="14" 
+          font-weight="700" 
+          fill="url(#footerGrad)" 
+          text-anchor="middle"
+          letter-spacing="3"
+          filter="url(#footerGlow)">
+      MALINFO
+    </text>
+    
+    <text x="0" y="75" 
+          font-family="system-ui, -apple-system, sans-serif" 
+          font-size="10" 
+          font-weight="400" 
+          fill="#484f58" 
+          text-anchor="middle"
+          letter-spacing="1">
+      Protecting Digital Sovereignty
+    </text>
+  </g>
+</svg>

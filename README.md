@@ -1,12 +1,12 @@
 <p align="center">
-  <a href="https://github.com/xC0D3F4TH3R/MALINFO">
-    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/logo.svg" alt="MALINFO Logo" width="220"/>
+  <a href="https://github.com/xC0D3F4TH3R/MALINFOx">
+    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/logo.svg" alt="MALINFO Logo" width="220"/>
   </a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge&logo=github&labelColor=0d1117&logoColor=58a6ff" alt="Version"/>
-  <img src="https://img.shields.io/badge/license-Govt%20Use%20Authorized-green?style=for-the-badge&logo=shield&labelColor=0d1117&logoColor=3fb950" alt="License"/>
+  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge&logo=shield&labelColor=0d1117&logoColor=3fb950" alt="License"/>
   <img src="https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge&logo=github-actions&labelColor=0d1117" alt="Build"/>
   <img src="https://img.shields.io/badge/security-hardened-critical?style=for-the-badge&logo=lock&labelColor=0d1117&logoColor=f85149" alt="Security"/>
   <img src="https://img.shields.io/badge/deployment-Docker%20%7C%20K8s%20%7C%20systemd-orange?style=for-the-badge&logo=docker&labelColor=0d1117&logoColor=f0883e" alt="Deployment"/>
@@ -16,8 +16,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/xC0D3F4TH3R/MALINFO">
-    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/banner.png" alt="MALINFO Banner" width="100%"/>
+  <a href="https://github.com/xC0D3F4TH3R/MALINFOx">
+    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/banner.png" alt="MALINFO Banner" width="100%"/>
   </a>
 </p>
 
@@ -85,7 +85,6 @@ graph TB
     end
 
     N[🔒 NGINX Reverse Proxy<br/>TLS 1.3 + Rate Limiting + CSP/HSTS]
-
     N --> API[⚡ Backend API<br/>FastAPI + Gunicorn + Uvicorn Workers]
     N --> ICAP[🔌 ICAP Gateway<br/>REQMOD/RESPMOD]
     N --> MON[👁️ File Monitor<br/>Watchdog + eBPF]
@@ -122,10 +121,12 @@ graph TB
 
 | Dashboard | VM Sandbox | Agency Reports |
 |:---------:|:----------:|:--------------:|
-| <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/demo-dashboard.gif" alt="Dashboard Demo" width="300"/> | <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/demo-vm-sandbox.gif" alt="VM Sandbox Demo" width="300"/> | <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/demo-agency-report.gif" alt="Agency Report Demo" width="300"/> |
+| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-dashboard.gif) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-vm-sandbox.gif) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-agency-report.gif) |
 | *Real-time analyst dashboard* | *VM template → analysis → monitoring* | *Auto-formatted gov reports* |
 
 </div>
+
+> **Don't have the demo GIFs yet?** Place them in `/assets/` — see [Assets Required](#-assets-required) section below.
 
 ---
 
@@ -133,8 +134,8 @@ graph TB
 
 ```bash
 # 1️⃣ Clone & Initialize
-git clone https://github.com/xC0D3F4TH3R/MALINFO.git
-cd MALINFO
+git clone https://github.com/xC0D3F4TH3R/MALINFOx.git
+cd MALINFOx
 make init
 
 # 2️⃣ Generate Secrets (⚠️ SAVE OUTPUT!)
@@ -412,8 +413,8 @@ sudo systemctl enable --now malinfo-backend malinfo-icap malinfo-monitor
 
 ```bash
 # On Oracle VM (ARM, 4 OCPU, 24GB RAM, 200GB boot)
-git clone https://github.com/xC0D3F4TH3R/MALINFO.git
-cd MALINFO && make secrets && cp .env.example .env && vim .env
+git clone https://github.com/xC0D3F4TH3R/MALINFOx.git
+cd MALINFOx && make secrets && cp .env.example .env && vim .env
 make prod
 
 # Cloudflare Tunnel (free TLS + DDoS + WAF)
@@ -466,6 +467,7 @@ chmod +x deploy.sh
 - Session management with revocation, CSRF protection
 
 ### 🏗️ Infrastructure (systemd hardening)
+
 ```ini
 NoNewPrivileges=true
 PrivateTmp=true
@@ -493,7 +495,7 @@ SystemCallErrorNumber=EPERM
 ## 📈 Monitoring & Observability
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/grafana-dashboard.png" alt="Grafana Dashboard" width="95%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/grafana-dashboard.png" alt="Grafana Dashboard" width="95%"/>
 </div>
 
 ### Pre-Provisioned Grafana Dashboards
@@ -502,6 +504,7 @@ SystemCallErrorNumber=EPERM
 - **Sandbox Status** — VM pool, task queue, guest agent health, MalScore distribution
 
 ### Key Prometheus Metrics
+
 | Metric | Type | Description |
 |--------|------|-------------|
 | `http_requests_total` | Counter | Requests by method/handler/status |
@@ -522,6 +525,7 @@ SystemCallErrorNumber=EPERM
 ## ⚙️ Configuration
 
 ### 🔑 Required Environment Variables
+
 | Variable | Description | Required |
 |----------|-------------|:--------:|
 | `SECRET_KEY` | JWT signing key (32+ chars, `openssl rand -base64 32`) | ✅ |
@@ -532,6 +536,7 @@ SystemCallErrorNumber=EPERM
 | `GRAFANA_PASSWORD` | Grafana admin password | ✅ |
 
 ### 📧 Agency Notification (SMTP)
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SMTP_HOST` | SMTP server | `smtp.gmail.com` |
@@ -542,6 +547,7 @@ SystemCallErrorNumber=EPERM
 | `AGENCY_NOTIFICATION_EMAIL` | Default recipient | `ary4ntom4r@gmail.com` |
 
 ### 🔌 Optional Integrations
+
 | Variable | Use Case |
 |----------|----------|
 | `VIRUSTOTAL_API_KEY` | Hash/URL/IP reputation |
@@ -635,7 +641,7 @@ For feature requests, use GitHub Issues with appropriate labels.
 
 ## 📄 License
 
-**Government Use Authorized** — See [LICENSE](LICENSE) for details.
+**MIT License** — See [LICENSE](LICENSE) for details.
 
 ---
 
@@ -645,7 +651,7 @@ For feature requests, use GitHub Issues with appropriate labels.
 
 [![Live Demo](https://img.shields.io/badge/Demo-Live-green?style=for-the-badge&logo=external-link&logoColor=white)](https://malinfo.duckdns.org)
 [![API Docs](https://img.shields.io/badge/API-Docs-blue?style=for-the-badge&logo=swagger&logoColor=white)](https://malinfo.duckdns.org/docs)
-[![Wiki](https://img.shields.io/badge/Wiki-Docs-orange?style=for-the-badge&logo=gitbook&logoColor=white)](https://github.com/xC0D3F4TH3R/MALINFO/wiki)
+[![Wiki](https://img.shields.io/badge/Wiki-Docs-orange?style=for-the-badge&logo=gitbook&logoColor=white)](https://github.com/xC0D3F4TH3R/MALINFOx/wiki)
 [![Report Security](https://img.shields.io/badge/Report-Security-red?style=for-the-badge&logo=bug&logoColor=white)](mailto:security@xC0D3F4TH3R.dev)
 
 </div>
@@ -653,7 +659,7 @@ For feature requests, use GitHub Issues with appropriate labels.
 ---
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFO/main/assets/footer.svg" alt="Footer" width="50%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/footer.svg" alt="Footer" width="50%"/>
   <br/><br/>
   <b>Built with ❤️ by <a href="https://github.com/xC0D3F4TH3R">xC0D3F4TH3R</a> for National Cyber Defense</b><br/>
   <sub>MALINFO v2.0.0 — Protecting Digital Sovereignty</sub>
