@@ -261,7 +261,7 @@ class YaraManager:
             self._save_feed(feed)
             return True
         except Exception as exc:
-            logger.error(f"Failed to add feed {feed.feed_id}: {exc}")
+            logger.exception(f"Failed to add feed {feed.feed_id}: {exc}")
             return False
     
     def _save_feed(self, feed: YaraFeed):
@@ -337,7 +337,7 @@ class YaraManager:
             result["rules_imported"] = rules_imported
             
         except Exception as exc:
-            logger.error(f"Feed sync failed for {feed_id}: {exc}")
+            logger.exception(f"Feed sync failed for {feed_id}: {exc}")
             feed.last_sync = datetime.utcnow()
             feed.last_sync_status = f"error: {exc}"
             self.add_feed(feed)
@@ -406,7 +406,7 @@ class YaraManager:
                     imported += self._import_rule_content(data["rule"], feed_id, filters)
             return imported
         except Exception as exc:
-            logger.error(f"JSON import failed: {exc}")
+            logger.exception(f"JSON import failed: {exc}")
             return 0
     
     def _import_raw_rules(self, content: bytes, feed_id: str, filters: dict) -> int:
@@ -421,7 +421,7 @@ class YaraManager:
                     imported += self._import_rule_content(rule_text, feed_id, filters)
             return imported
         except Exception as exc:
-            logger.error(f"Raw import failed: {exc}")
+            logger.exception(f"Raw import failed: {exc}")
             return 0
     
     def _import_single_rule(self, content: bytes, feed_id: str, filters: dict) -> int:
@@ -440,7 +440,7 @@ class YaraManager:
             content = file_path.read_text(encoding="utf-8", errors="ignore")
             return self._import_rule_content(content, feed_id, filters, str(file_path))
         except Exception as exc:
-            logger.error(f"Rule file import failed for {file_path}: {exc}")
+            logger.exception(f"Rule file import failed for {file_path}: {exc}")
             return 0
     
     def _import_rule_content(self, content: str, feed_id: str, filters: dict, source_file: str | None = None) -> int:
@@ -573,7 +573,7 @@ class YaraManager:
             
             return True
         except Exception as exc:
-            logger.error(f"Failed to add rule {rule.rule_id}: {exc}")
+            logger.exception(f"Failed to add rule {rule.rule_id}: {exc}")
             return False
     
     def get_rule(self, rule_id: str) -> YaraRule | None:
@@ -653,7 +653,7 @@ class YaraManager:
             
             return True
         except Exception as exc:
-            logger.error(f"Failed to delete rule {rule_id}: {exc}")
+            logger.exception(f"Failed to delete rule {rule_id}: {exc}")
             return False
     
     def _invalidate_rulesets_for_rule(self, rule_id: str):
@@ -697,7 +697,7 @@ class YaraManager:
             self._ruleset_cache[ruleset.ruleset_id] = ruleset
             return True
         except Exception as exc:
-            logger.error(f"Failed to create ruleset {ruleset.ruleset_id}: {exc}")
+            logger.exception(f"Failed to create ruleset {ruleset.ruleset_id}: {exc}")
             return False
     
     def compile_ruleset(self, ruleset_id: str, force: bool = False) -> dict:
@@ -783,7 +783,7 @@ class YaraManager:
             except subprocess.TimeoutExpired:
                 return {"success": False, "error": "Compilation timeout"}
             except Exception as exc:
-                logger.error(f"Ruleset compilation failed: {exc}")
+                logger.exception(f"Ruleset compilation failed: {exc}")
                 return {"success": False, "error": str(exc)}
     
     def get_ruleset(self, ruleset_id: str) -> YaraRuleset | None:
@@ -892,7 +892,7 @@ class YaraManager:
         except subprocess.TimeoutExpired:
             return {"error": "Scan timeout", "scan_time_ms": timeout * 1000}
         except Exception as exc:
-            logger.error(f"YARA scan failed: {exc}")
+            logger.exception(f"YARA scan failed: {exc}")
             return {"error": str(exc)}
     
     def scan_bytes(self, data: bytes, ruleset_id: str | None = None, timeout: int = 60) -> dict:
@@ -945,7 +945,7 @@ class YaraManager:
             
             return True
         except Exception as exc:
-            logger.error(f"Failed to add test case: {exc}")
+            logger.exception(f"Failed to add test case: {exc}")
             return False
     
     def run_rule_tests(self, rule_id: str) -> dict:

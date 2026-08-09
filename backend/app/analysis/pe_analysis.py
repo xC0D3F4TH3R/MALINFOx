@@ -1,9 +1,12 @@
 """Windows PE (Portable Executable) static analysis via `pefile`."""
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.analysis.strings_entropy import shannon_entropy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # Import commonly abused Windows APIs — their presence isn't proof of malice,
 # but a cluster of these together is a well-established heuristic signal.

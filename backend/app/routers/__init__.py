@@ -1,5 +1,6 @@
 from app.routers import (
     auth,
+    decompiler,
     monitoring,
     public_report,
     reports,
@@ -7,6 +8,7 @@ from app.routers import (
     threat_intel,
     upload,
     vm_orchestrator,
+    yara,
 )
 
-__all__ = ["auth", "monitoring", "public_report", "reports", "sandbox", "threat_intel", "upload", "vm_orchestrator"]
+__all__ = ["auth", "decompiler", "monitoring", "public_report", "reports", "sandbox", "threat_intel", "upload", "vm_orchestrator", "yara"]

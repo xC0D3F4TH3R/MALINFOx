@@ -16,12 +16,15 @@ CAPEv2 REST API reference (matches the actual project's `/apiv2/` routes):
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import requests
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from app.config import settings
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.sandbox")
 

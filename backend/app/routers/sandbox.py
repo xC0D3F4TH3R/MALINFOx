@@ -5,15 +5,19 @@ Supports both legacy CAPEv2 integration and new built-in VM orchestrator.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.rbac import User, require_analyst
 from app.config import settings
 from app.database import get_db
 from app.sandbox.capev2_client import CapeV2Client, SandboxUnavailableError
 from app.sandbox.orchestrator import detonate_sample
-from app.sandbox.vm_orchestrator import get_orchestrator, TaskState
+from app.sandbox.vm_orchestrator import TaskState, get_orchestrator
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/sandbox", tags=["sandbox"])
 
@@ -105,7 +109,7 @@ async def submit_to_sandbox(
                 "engine": "vm_orchestrator",
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"VM orchestrator submission failed: {e}")
+            raise HTTPException(status_code=500, detail=f"VM orchestrator submission failed: {e}") from e
 
 
 @router.get("/status/{task_id}")
@@ -133,9 +137,9 @@ async def get_sandbox_status(
         status = client.get_status(task_id)
         return {"task_id": task_id, "status": status, "engine": "capev2"}
     except SandboxUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Status check failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Status check failed: {exc}") from exc
 
 
 @router.get("/report/{task_id}")
@@ -174,6 +178,6 @@ async def get_sandbox_report(
         report = client.get_report(task_id)
         return report
     except SandboxUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Report retrieval failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Report retrieval failed: {exc}") from exc

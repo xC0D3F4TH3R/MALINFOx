@@ -14,10 +14,13 @@ import re
 import socket
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from app.analysis.strings_entropy import shannon_entropy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.ioc_enrichment")
 
@@ -344,7 +347,7 @@ def _is_valid_ioc(ioc_type: str, value: str, context: str) -> bool:
             if any(value.lower().endswith(d) for d in common_legit):
                 return False
         # Must have at least one dot and valid TLD
-        if "." not in value or len(value.split(".")[-1]) < 2:
+        if "." not in value or len(value.rsplit(".", maxsplit=1)[-1]) < 2:
             return False
     elif ioc_type in ["md5", "sha1", "sha256"]:
         # Check if it looks like a real hash (not just hex string)

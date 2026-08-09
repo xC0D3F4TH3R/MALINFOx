@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import re
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # Dangerous / sensitive Android permissions worth flagging in a report.
 _HIGH_RISK_PERMISSIONS = {

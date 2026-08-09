@@ -7,7 +7,10 @@ and requires Apple Silicon hardware for macOS — this module covers the
 """
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def analyze_macho(file_path: Path) -> dict:

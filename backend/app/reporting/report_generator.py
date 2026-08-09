@@ -1,7 +1,6 @@
-"""
-MALINFO — Professional Report Generator
+"""MALINFO — Professional Report Generator
 Supports multiple report types: executive_summary, technical_deep_dive, mitre_matrix, kill_chain, ioc_package
-Exports: HTML, PDF (via WeasyPrint), JSON, STIX 2.1, MISP, CSV
+Exports: HTML, PDF (via WeasyPrint - optional, requires system dependencies), JSON, STIX 2.1, MISP, CSV
 """
 from __future__ import annotations
 
@@ -13,10 +12,21 @@ from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from weasyprint import CSS, HTML
 
 from app.config import settings
 from app.network_forensics.c2_detection import extract_c2_details
+
+# Optional WeasyPrint import for PDF generation
+try:
+    from weasyprint import CSS, HTML
+    WEASYPRINT_AVAILABLE = True
+except ImportError:
+    WEASYPRINT_AVAILABLE = False
+    CSS = HTML = None  # type: ignore
+except OSError:
+    # WeasyPrint may import but fail due to missing system libraries (GTK/Pango)
+    WEASYPRINT_AVAILABLE = False
+    CSS = HTML = None  # type: ignore
 
 _env = Environment(
     loader=FileSystemLoader(str(Path(__file__).parent / "templates")),
@@ -176,7 +186,7 @@ class ReportGenerator:
             "T1486": "Impact", "T1490": "Impact",
         }
         # Match prefix (e.g., T1059.001 -> T1059)
-        prefix = technique_id.split('.')[0]
+        prefix = technique_id.split('.', maxsplit=1)[0]
         return tactic_map.get(prefix, "Unknown")
 
     def _build_kill_chain(self, *reports) -> list[dict]:
@@ -218,7 +228,7 @@ class ReportGenerator:
             "T1071": "Command & Control", "T1090": "Command & Control", "T1573": "Command & Control",
             "T1005": "Actions on Objectives", "T1003": "Actions on Objectives", "T1041": "Actions on Objectives",
         }
-        prefix = technique_id.split('.')[0]
+        prefix = technique_id.split('.', maxsplit=1)[0]
         return mapping.get(prefix, "Unknown")
 
     def _get_top_iocs(self, *reports) -> list[dict]:
@@ -340,6 +350,8 @@ class ReportGenerator:
 
     def render_pdf(self, html: str, output_path: Path) -> Path:
         """Render HTML to PDF using WeasyPrint."""
+        if not WEASYPRINT_AVAILABLE:
+            raise RuntimeError("PDF generation not available: WeasyPrint is not installed or missing system dependencies (GTK/Pango). Install via system package manager.")
         html_doc = HTML(string=html, base_url=str(settings.REPORT_DIR))
         css = CSS(string=self._get_pdf_css())
         html_doc.write_pdf(str(output_path), stylesheets=[css])

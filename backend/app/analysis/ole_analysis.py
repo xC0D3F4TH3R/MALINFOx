@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import logging
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.analysis.strings_entropy import shannon_entropy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.ole_analysis")
 

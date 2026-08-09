@@ -14,7 +14,10 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 try:
     import numpy as np
@@ -263,7 +266,7 @@ def extract_tls_certificates(pcap_path: Path) -> list[dict]:
                 continue
         cap.close()
     except Exception as exc:
-        logger.error(f"TLS certificate extraction failed: {exc}")
+        logger.exception(f"TLS certificate extraction failed: {exc}")
     
     return certs
 
@@ -342,7 +345,7 @@ except ImportError:
 
 # Character-level features for DGA detection
 _DGA_FEATURES = {
-    "length": lambda d: len(d),
+    "length": len,
     "entropy": lambda d: shannon_entropy(d.encode()),
     "digit_ratio": lambda d: sum(c.isdigit() for c in d) / len(d) if d else 0,
     "vowel_ratio": lambda d: sum(c.lower() in "aeiou" for c in d) / len(d) if d else 0,
@@ -773,7 +776,7 @@ async def analyze_pcap_deep(pcap_path: Path) -> PcapAnalysisResult:
     try:
         import pyshark
     except ImportError:
-        logger.error("pyshark not installed, cannot analyze PCAP")
+        logger.exception("pyshark not installed, cannot analyze PCAP")
         result.anomalies.append({"type": "error", "message": "pyshark not installed"})
         return result
     
@@ -1197,7 +1200,7 @@ def _map_network_to_mitre(result: PcapAnalysisResult) -> list[str]:
     
     for c2 in result.c2_candidates:
         fw = c2.get("framework", "")
-        if fw == "Cobalt Strike" or fw == "Sliver":
+        if fw in {"Cobalt Strike", "Sliver"}:
             techniques.update(["T1055", "T1059", "T1071", "T1105", "T1573"])
         elif fw == "Metasploit":
             techniques.update(["T1055", "T1059", "T1071", "T1105"])

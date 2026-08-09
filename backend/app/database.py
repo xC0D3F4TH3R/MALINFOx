@@ -29,5 +29,5 @@ async def get_db() -> AsyncSession:
 async def init_db() -> None:
     """Create tables on startup. Use Alembic migrations in production."""
     async with engine.begin() as conn:
-        from app import models  # noqa: F401  (register models on Base.metadata)
+        from app import models
         await conn.run_sync(Base.metadata.create_all)

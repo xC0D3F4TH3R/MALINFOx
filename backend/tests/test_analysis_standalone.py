@@ -42,7 +42,6 @@ results: list[tuple[str, bool, str]] = []
 
 def check(name: str, condition: bool, detail: str = "") -> None:
     results.append((name, condition, detail))
-    print(f"[{PASS if condition else FAIL}] {name}" + (f" — {detail}" if detail and not condition else ""))
 
 
 def main() -> None:
@@ -57,16 +56,13 @@ def main() -> None:
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    print()
     total = len(results)
     passed = sum(1 for _, ok, _ in results if ok)
-    print(f"{passed}/{total} checks passed")
     if passed != total:
         sys.exit(1)
 
 
 def run_hashing_test(tmp: Path) -> None:
-    print("\n--- Hashing ---")
     f = tmp / "hash_test.txt"
     f.write_bytes(b"MALINFO test content")
     h = hashing.compute_hashes(f)
@@ -79,7 +75,6 @@ def run_hashing_test(tmp: Path) -> None:
 
 
 def run_filetype_test(tmp: Path) -> None:
-    print("\n--- File type identification ---")
     pe_file = tmp / "fake.exe"
     pe_file.write_bytes(b"MZ" + b"\x00" * 100)
     result = filetype.identify_file(pe_file)
@@ -97,7 +92,6 @@ def run_filetype_test(tmp: Path) -> None:
 
 
 def run_entropy_test(tmp: Path) -> None:
-    print("\n--- Entropy & string extraction ---")
     import os
     random_file = tmp / "random.bin"
     random_file.write_bytes(os.urandom(4096))
@@ -117,7 +111,6 @@ def run_entropy_test(tmp: Path) -> None:
 
 
 def run_ioc_extraction_test() -> None:
-    print("\n--- IOC extraction ---")
     test_strings = [
         "connecting to http://185.220.101.42/gate.php for checkin",
         "beacon interval set, contacting c2 panel now",
@@ -142,7 +135,6 @@ def run_ioc_extraction_test() -> None:
 
 
 def run_apk_test(tmp: Path) -> None:
-    print("\n--- APK analysis ---")
     apk_path = tmp / "test.apk"
     manifest_strings = [
         "android.permission.SEND_SMS",
@@ -173,7 +165,6 @@ def run_apk_test(tmp: Path) -> None:
 
 
 def run_risk_scoring_test() -> None:
-    print("\n--- Risk scoring ---")
     clean_report = {
         "yara": {"matches": []},
         "entropy": 4.2,

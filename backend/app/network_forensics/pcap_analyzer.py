@@ -11,7 +11,10 @@ from __future__ import annotations
 import itertools
 import logging
 from collections import Counter, defaultdict
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.network_forensics")
 

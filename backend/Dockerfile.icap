@@ -1,5 +1,6 @@
 # MALINFO ICAP Gateway - Production Dockerfile
 # Runs the ICAP server for network gateway integration
+# Security hardened: non-root user, minimal attack surface
 
 # --- Build Stage ---
 FROM python:3.11-slim as builder
@@ -21,6 +22,12 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # --- Runtime Stage ---
 FROM python:3.11-slim
 
+# Security labels
+LABEL maintainer="MALINFO Team" \
+      version="1.0.0-pilot" \
+      description="MALINFO ICAP Gateway" \
+      security.scan="true"
+
 # Install runtime dependencies including libvirt for VM orchestration
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
@@ -32,13 +39,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libyara5 \
     libffi8 \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /var/cache/apt/*
 
 # Create non-root user with proper groups for libvirt/kvm access
 RUN groupadd -r -g 998 libvirt && \
     groupadd -r -g 997 kvm && \
     groupadd -r -g 996 malinfo && \
-    useradd -r -g malinfo -G libvirt,kvm -d /home/malinfo -m -s /bin/bash malinfo
+    useradd -r -u 996 -g malinfo -G libvirt,kvm -d /home/malinfo -m -s /bin/bash malinfo
 
 WORKDIR /app
 COPY --from=builder /root/.local /home/malinfo/.local
@@ -56,6 +66,9 @@ ENV PATH=/home/malinfo/.local/bin:$PATH \
     LIBVIRT_DEFAULT_URI=qemu:///system
 
 EXPOSE 1344
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Run ICAP server
 CMD ["python", "-m", "app.gateway.icap_server"]

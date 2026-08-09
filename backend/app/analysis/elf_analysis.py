@@ -1,7 +1,10 @@
 """Linux ELF static analysis via `pyelftools`."""
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _SUSPICIOUS_SYMBOLS = {
     "ptrace", "execve", "socket", "connect", "fork", "setuid", "system",

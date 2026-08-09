@@ -4,6 +4,7 @@
 export const API = {
   baseURL: '',
   token: null,
+  csrfToken: null,
   cache: new Map(),
   cacheTTL: 30000, // 30 seconds
 
@@ -18,19 +19,40 @@ export const API = {
       this.baseURL = '/api';
     }
     console.log('[MALINFO API] Base URL:', this.baseURL);
+
+    // Fetch CSRF token on init
+    this.fetchCsrfToken();
   },
 
-  // Set auth token
+  // Fetch CSRF token from backend
+  async fetchCsrfToken() {
+    try {
+      const response = await fetch(`${this.baseURL}/csrf-token`, {
+        credentials: 'include', // Important for cookies
+      });
+      if (response.ok) {
+        const data = await response.json();
+        this.csrfToken = data.csrf_token;
+        console.log('[MALINFO API] CSRF token fetched');
+      }
+    } catch (error) {
+      console.warn('[MALINFO API] Failed to fetch CSRF token:', error);
+    }
+  },
+
+  // Set auth token (kept for backwards compatibility)
   setToken(token) {
     this.token = token;
   },
 
-  // Get auth token
+  // Get auth token - now reads from cookie if available
   getToken() {
-    return this.token || localStorage.getItem('malinfo_access_token');
+    // Try memory first, then cookie (httpOnly cookies can't be read from JS)
+    // The token is sent automatically with credentials: 'include'
+    return this.token;
   },
 
-  // Clear token
+  // Clear token (for logout)
   clearToken() {
     this.token = null;
     localStorage.removeItem('malinfo_access_token');
@@ -42,20 +64,25 @@ export const API = {
     const headers = {
       'Content-Type': 'application/json',
     };
-    if (includeAuth) {
-      const token = this.getToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+    // Note: With httpOnly cookies, we don't need to manually add Authorization header
+    // The browser sends cookies automatically with credentials: 'include'
+    // But we keep the token for API key auth
+    if (includeAuth && this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    // Add CSRF token for state-changing operations
+    if (this.csrfToken) {
+      headers['X-CSRF-Token'] = this.csrfToken;
     }
     return headers;
   },
 
-  // Core request method
+  // Core request method - always use credentials: 'include' for cookies
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const config = {
       headers: this.getHeaders(options.auth !== false),
+      credentials: 'include', // Critical for httpOnly cookies
       ...options,
     };
 
@@ -173,21 +200,16 @@ export const API = {
 
   async login(username, password, mfaCode = null, rememberMe = false) {
     const data = await this.post('/auth/login', { username, password, mfa_code: mfaCode, remember_me: rememberMe });
+    // Tokens are now in httpOnly cookies, but we store access_token in memory for API key fallback
     this.setToken(data.access_token);
-    localStorage.setItem('malinfo_access_token', data.access_token);
-    localStorage.setItem('malinfo_refresh_token', data.refresh_token);
     return data;
   },
 
   async refreshToken() {
-    const refreshToken = localStorage.getItem('malinfo_refresh_token');
-    if (!refreshToken) return false;
-
+    // Refresh token is in httpOnly cookie, sent automatically
     try {
-      const data = await this.post('/auth/refresh', { refresh_token: refreshToken }, { auth: false });
+      const data = await this.post('/auth/refresh', {}, { auth: false });
       this.setToken(data.access_token);
-      localStorage.setItem('malinfo_access_token', data.access_token);
-      localStorage.setItem('malinfo_refresh_token', data.refresh_token);
       return true;
     } catch (error) {
       this.clearToken();
@@ -257,6 +279,7 @@ export const API = {
   async downloadReport(sampleId) {
     const response = await fetch(`${this.baseURL}/reports/${sampleId}/download`, {
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     if (!response.ok) throw new Error('Failed to download report');
     return response.blob();

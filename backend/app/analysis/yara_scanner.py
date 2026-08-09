@@ -36,7 +36,6 @@ def _load_rules():
     try:
         _compiled_rules = yara.compile(filepaths=rule_files)
     except Exception as exc:
-        print(f"[yara_scanner] Failed to compile rules: {exc}")
         _compiled_rules = False
 
     return _compiled_rules

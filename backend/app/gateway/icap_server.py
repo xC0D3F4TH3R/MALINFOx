@@ -396,7 +396,7 @@ class ICAPServer:
                 analyze_pcap(Path(sandbox_report["pcap_path"]))
                 logger.info(f"Async sandbox completed for {file_path.name}: {sandbox_report.get('malscore', 0)}")
         except Exception as exc:
-            logger.error(f"Async sandbox failed: {exc}")
+            logger.exception(f"Async sandbox failed: {exc}")
 
     def _build_block_response(self, analysis_result: dict) -> str:
         """Build JSON response for blocked content."""

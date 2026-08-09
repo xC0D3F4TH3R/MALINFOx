@@ -41,7 +41,7 @@ _PRIVATE_IP_RE = re.compile(
 def _confidence_for_domain(domain: str) -> float:
     if domain.lower() in _LOW_VALUE_DOMAINS:
         return 0.1
-    if domain.count(".") >= 3 or any(ch.isdigit() for ch in domain.split(".")[0]):
+    if domain.count(".") >= 3 or any(ch.isdigit() for ch in domain.split(".", maxsplit=1)[0]):
         return 0.6  # subdomain depth / numeric labels correlate with DGA-style C2
     return 0.4
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -603,7 +604,7 @@ class ThreatFeedManager:
                     feed = ThreatFeed(**feed_data)
                     self.feeds[feed.feed_id] = feed
             except Exception as exc:
-                logger.error(f"Failed to load feeds: {exc}")
+                logger.exception(f"Failed to load feeds: {exc}")
     
     def _save_feeds(self):
         """Save feeds to storage."""
@@ -611,7 +612,7 @@ class ThreatFeedManager:
             with open(self.feeds_file, "w") as f:
                 json.dump([feed.__dict__ for feed in self.feeds.values()], f, indent=2, default=str)
         except Exception as exc:
-            logger.error(f"Failed to save feeds: {exc}")
+            logger.exception(f"Failed to save feeds: {exc}")
     
     def add_feed(self, feed: ThreatFeed) -> bool:
         """Add a new threat feed."""
@@ -690,7 +691,7 @@ class ThreatFeedManager:
                 result["indicators_imported"] = imported
                 
         except Exception as exc:
-            logger.error(f"Feed sync failed for {feed_id}: {exc}")
+            logger.exception(f"Feed sync failed for {feed_id}: {exc}")
             feed.last_sync = datetime.utcnow()
             feed.last_sync_status = f"error: {exc}"
             feed.indicators_rejected += 1

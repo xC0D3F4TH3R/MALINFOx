@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+from redis.asyncio import Redis
 
 from app.config import settings
 from app.database import init_db
@@ -30,9 +32,20 @@ from app.routers import (
     vm_orchestrator,
     yara,
 )
+from app.security_middleware import (
+    CSRFMiddleware,
+    RateLimitMiddleware,
+    RequestValidationMiddleware,
+    SecureErrorMiddleware,
+    SecurityHeadersMiddleware,
+    setup_security_middleware,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger("malinfo")
+
+# Global Redis client for rate limiting
+redis_client: Redis | None = None
 
 # Prometheus metrics
 HTTP_REQUESTS_TOTAL = Counter(
@@ -60,6 +73,8 @@ AUTH_FAILURES = Counter("malinfo_auth_failures_total", "Authentication failures"
 ACCOUNT_LOCKOUTS = Counter("malinfo_account_lockouts_total", "Account lockouts")
 THREAT_INTEL_SYNC_STATUS = Gauge("malinfo_threat_intel_last_sync_status", "Threat intel sync status (1=success, 0=failure)", ["feed"])
 THREAT_INTEL_LAST_SYNC = Gauge("malinfo_threat_intel_last_sync_timestamp", "Threat intel last sync timestamp", ["feed"])
+RATE_LIMIT_HITS = Counter("malinfo_rate_limit_hits_total", "Rate limit hits", ["endpoint"])
+CSRF_FAILURES = Counter("malinfo_csrf_failures_total", "CSRF validation failures")
 
 app = FastAPI(
     title="MALINFO",
@@ -70,12 +85,21 @@ app = FastAPI(
     version="1.0.0-pilot",
 )
 
+# Setup security middleware
+setup_security_middleware(app)
+
+# Add rate limiting middleware with Redis
+if settings.RATE_LIMIT_ENABLED:
+    app.add_middleware(RateLimitMiddleware, redis_client=None)  # Will be set in startup
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    max_age=3600,
 )
 
 # Prometheus metrics middleware
@@ -97,15 +121,28 @@ async def prometheus_middleware(request: Request, call_next):
     
     return response
 
+
 @app.get("/metrics")
 async def metrics():
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-@app.on_event("startup")
-async def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global redis_client
+    # Startup
     await init_db()
     logger.info("MALINFO backend started. Environment=%s SandboxEnabled=%s", settings.ENVIRONMENT, settings.SANDBOX_ENABLED)
+    
+    # Initialize Redis for rate limiting
+    if settings.RATE_LIMIT_ENABLED:
+        try:
+            redis_client = Redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+            await redis_client.ping()
+            logger.info("Redis connected for rate limiting")
+        except Exception as e:
+            logger.warning("Failed to connect to Redis for rate limiting: %s", e)
+            redis_client = None
     
     # Start monitoring service if enabled
     if settings.MONITOR_ENABLED:
@@ -114,13 +151,18 @@ async def on_startup():
     # Start ICAP server if enabled
     if settings.ICAP_ENABLED:
         await start_icap_server()
-
-
-@app.on_event("shutdown")
-async def on_shutdown():
+    
+    yield
+    
+    # Shutdown
+    if redis_client:
+        await redis_client.close()
     await stop_monitoring()
     await stop_icap_server()
     logger.info("MALINFO backend shutdown complete")
+
+
+app.router.lifespan_context = lifespan
 
 
 @app.get("/api/health")
@@ -133,6 +175,24 @@ async def health():
         "monitoring_enabled": settings.MONITOR_ENABLED,
         "icap_enabled": settings.ICAP_ENABLED,
     }
+
+
+# CSRF token endpoint for frontend
+@app.get("/api/csrf-token")
+async def get_csrf_token(response: Response):
+    """Generate and return a CSRF token as a secure cookie."""
+    import secrets
+    csrf_token = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf_token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="strict",
+        max_age=3600,
+        path="/"
+    )
+    return {"csrf_token": csrf_token}
 
 
 app.include_router(auth.router, prefix=settings.API_PREFIX)

@@ -7,10 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.config import settings
 from app.sandbox.capev2_client import CapeV2Client, SandboxUnavailableError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.sandbox.orchestrator")
 

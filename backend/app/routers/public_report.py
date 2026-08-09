@@ -1,5 +1,4 @@
-"""
-Public-facing reporting endpoint: lets any citizen report a suspected
+"""Public-facing reporting endpoint: lets any citizen report a suspected
 malicious file, phishing URL, C2 IP, or malicious app for triage by
 analysts — the "help government / help the public" feature. Deliberately
 rate-limited and does not require identity disclosure (anonymous
@@ -16,10 +15,12 @@ agencies upon submission.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import shutil
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import (
@@ -37,6 +38,10 @@ from app.config import settings
 from app.database import get_db
 from app.models import CitizenReport, Sample
 from app.routers.upload import _run_pipeline
+from app.security_upload import (
+    get_safe_destination_path,
+    validate_upload_file,
+)
 from app.schemas import CitizenReportIn, CitizenReportOut
 from app.services.agency_notification import (
     AgencyContact,
@@ -47,6 +52,8 @@ from app.services.agency_notification import (
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger("malinfo.public_report")
 
 router = APIRouter(prefix="/public/report", tags=["public-reporting"])
 
@@ -65,11 +72,11 @@ def _notify_agencies(
     file_info: dict | None = None,
     iocs: list[dict] | None = None,
     sample_id: str | None = None,
-):
-    """Send notification to configured agencies"""
+) -> dict:
+    """Send notification to configured agencies. Returns notification results."""
     try:
         notification_service = get_notification_service()
-        notification_service.notify_agencies(
+        result = notification_service.notify_agencies(
             report_id=report.id,
             reference_code=_reference_code(report.id),
             incident_type=incident_type,
@@ -94,9 +101,11 @@ def _notify_agencies(
                 "Notify affected parties if data exposure detected",
             ],
         )
-    except Exception:
-        # Don't fail the report submission if notification fails
-        pass
+        return result
+    except Exception as e:
+        # Log the failure but return error info so caller knows
+        logger.error(f"Failed to notify agencies for report {report.id}: {e}", exc_info=True)
+        return {"sent": False, "reason": str(e), "error": True}
 
 
 @router.post("/details", response_model=CitizenReportOut)
@@ -134,7 +143,7 @@ async def submit_report_details(payload: CitizenReportIn, db: AsyncSession = Dep
     await db.refresh(report)
 
     # Notify agencies immediately
-    _notify_agencies(
+    notify_result = _notify_agencies(
         report=report,
         incident_type=payload.report_type,
         severity=severity,
@@ -143,6 +152,10 @@ async def submit_report_details(payload: CitizenReportIn, db: AsyncSession = Dep
         submitted_value=payload.submitted_value,
         iocs=iocs,
     )
+    
+    # Log notification result for audit
+    if notify_result.get("error"):
+        logger.warning(f"Agency notification failed for report {report.id}: {notify_result.get('reason')}")
 
     return CitizenReportOut(
         id=report.id, report_type=report.report_type, status=report.status,
@@ -160,24 +173,40 @@ async def submit_report_with_file(
     db: AsyncSession = Depends(get_db),
 ):
     """Report a suspected malicious file — automatically triggers the full analysis pipeline."""
-    if file.size and file.size > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-        raise HTTPException(413, f"File exceeds {settings.MAX_UPLOAD_SIZE_MB} MB limit")
-
-    sample_id = str(uuid.uuid4())
-    dest = settings.UPLOAD_DIR / f"{sample_id}__{file.filename}"
-    with dest.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
+    # Comprehensive file validation
+    is_valid, error, file_info = await validate_upload_file(file, settings.UPLOAD_DIR)
+    
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error)
+    
+    # Get safe destination path
+    try:
+        dest = get_safe_destination_path(settings.UPLOAD_DIR, file_info["safe_filename"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # Move validated file from temp to final location
+    temp_path = Path(file_info["temp_path"])
+    try:
+        shutil.move(str(temp_path), str(dest))
+    except Exception as e:
+        # Cleanup temp file on error
+        if temp_path.exists():
+            temp_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
 
     # Calculate file hashes
     sha256_hash = hashlib.sha256()
-    sha1_hash = hashlib.sha1()
-    md5_hash = hashlib.md5()
+    sha1_hash = hashlib.sha1(usedforsecurity=False)
+    md5_hash = hashlib.md5(usedforsecurity=False)
     with dest.open("rb") as f:
         while chunk := f.read(8192):
             sha256_hash.update(chunk)
             sha1_hash.update(chunk)
             md5_hash.update(chunk)
 
+    sample_id = str(uuid.uuid4())
+    
     sample = Sample(
         id=sample_id,
         original_filename=file.filename or "unknown",
@@ -194,7 +223,7 @@ async def submit_report_with_file(
     severity = "high"
 
     # File info for agency notification
-    file_info = {
+    file_info_notif = {
         "filename": file.filename,
         "size": dest.stat().st_size,
         "sha256": sha256_hash.hexdigest(),
@@ -223,17 +252,21 @@ async def submit_report_with_file(
     await db.refresh(report)
 
     # Notify agencies immediately
-    _notify_agencies(
+    notify_result = _notify_agencies(
         report=report,
         incident_type="file",
         severity=severity,
         title="Citizen Report: Malicious File",
         description=description,
         submitted_value=file.filename,
-        file_info=file_info,
+        file_info=file_info_notif,
         iocs=iocs,
         sample_id=sample_id,
     )
+
+    # Log notification result for audit
+    if notify_result.get("error"):
+        logger.warning(f"Agency notification failed for report {report.id}: {notify_result.get('reason')}")
 
     background_tasks.add_task(_run_pipeline, sample_id, dest)
 

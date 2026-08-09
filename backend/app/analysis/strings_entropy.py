@@ -9,7 +9,10 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _ASCII_STRING_RE = re.compile(rb"[\x20-\x7e]{5,}")
 _WIDE_STRING_RE = re.compile(rb"(?:[\x20-\x7e]\x00){5,}")

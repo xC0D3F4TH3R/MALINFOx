@@ -3,10 +3,11 @@ Authentication and user management API routes.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import TYPE_CHECKING
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.rbac import (
     APIKey,
@@ -17,11 +18,16 @@ from app.auth.rbac import (
     UserCreate,
     UserUpdate,
     auth_service,
+    create_access_token,
+    create_refresh_token,
     get_current_user,
     require_admin,
     require_analyst,
 )
 from app.database import get_db
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -37,6 +43,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/login", response_model=TokenPair)
 async def login(
+    response: Response,
     request: Request,
     login_data: LoginRequest,
     db: AsyncSession = Depends(get_db),
@@ -45,23 +52,50 @@ async def login(
     client_ip = request.client.host if request.client else ""
     user_agent = request.headers.get("user-agent", "")
     
-    return await auth_service.authenticate(
+    token_pair = await auth_service.authenticate(
         login_data.username,
         login_data.password,
         login_data.mfa_code,
         client_ip,
         user_agent,
     )
+    
+    # Set httpOnly cookies
+    response.set_cookie(
+        key="access_token",
+        value=token_pair.access_token,
+        httponly=True,
+        secure=True,  # Requires HTTPS in production
+        samesite="strict",
+        max_age=30 * 60,  # 30 minutes
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=token_pair.refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=7 * 24 * 60 * 60,  # 7 days
+        path="/"
+    )
+    
+    return token_pair
 
 
 @router.post("/refresh", response_model=TokenPair)
 async def refresh_token(
+    response: Response,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Refresh access token using refresh token."""
-    body = await request.json()
-    refresh_token = body.get("refresh_token")
+    """Refresh access token using refresh token from cookie."""
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        # Fallback to body for API clients
+        body = await request.json()
+        refresh_token = body.get("refresh_token")
     
     if not refresh_token:
         raise HTTPException(status_code=400, detail="refresh_token required")
@@ -69,27 +103,63 @@ async def refresh_token(
     client_ip = request.client.host if request.client else ""
     user_agent = request.headers.get("user-agent", "")
     
-    return await auth_service.refresh_tokens(refresh_token, client_ip, user_agent)
+    token_pair = await auth_service.refresh_tokens(refresh_token, client_ip, user_agent)
+    
+    # Set new httpOnly cookies
+    response.set_cookie(
+        key="access_token",
+        value=token_pair.access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=30 * 60,
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=token_pair.refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=7 * 24 * 60 * 60,
+        path="/"
+    )
+    
+    return token_pair
 
 
 @router.post("/logout")
 async def logout(
+    response: Response,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke current session."""
     await auth_service.revoke_session(credentials.credentials, current_user.id)
+    
+    # Clear cookies
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("csrf_token", path="/")
+    
     return {"message": "Logged out successfully"}
 
 
 @router.post("/logout-all")
 async def logout_all(
+    response: Response,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     current_user: User = Depends(get_current_user),
 ):
     """Revoke all sessions for current user except current."""
     count = await auth_service.revoke_all_sessions(current_user.id, credentials.credentials)
+    
+    # Clear cookies
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("csrf_token", path="/")
+    
     return {"message": f"Revoked {count} other sessions"}
 
 
@@ -355,6 +425,29 @@ async def revoke_api_key(key_id: str, current_user: User = Depends(get_current_u
     key.is_active = False
     await db.commit()
     return {"message": "API key revoked"}
+
+
+@router.post("/api-keys/{key_id}/rotate", dependencies=[Depends(require_analyst)])
+async def rotate_api_key(
+    key_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rotate API key - generates new key while keeping old one valid for 24 hours."""
+    from app.auth.rbac import rotate_api_key
+    
+    new_key, api_key = await rotate_api_key(key_id, current_user.id, db)
+    return {
+        "id": api_key.id,
+        "name": api_key.name,
+        "key": new_key,  # Only returned once!
+        "prefix": api_key.key_prefix,
+        "permissions": api_key.permissions,
+        "expires_at": api_key.expires_at,
+        "rotated_at": api_key.rotated_at,
+        "rotation_count": api_key.rotation_count,
+        "message": "API key rotated. Previous key valid for 24 hours for transition.",
+    }
 
 
 # Add missing import

@@ -14,9 +14,12 @@ import logging
 import struct
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.analysis.strings_entropy import shannon_entropy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.pe_deep")
 

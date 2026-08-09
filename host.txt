@@ -1,0 +1,728 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+PS E:\PROJECT INDUSTRY\MALINFO> hermes
+⚠ A previous `hermes update` was interrupted mid-install — finishing dependency installation now...
+  → Running from hermes.exe; applying package-only first aid, then quarantined full reinstall (core marker stays until that succeeds)...
+Using Python 3.11.15 environment at: venv
+Resolved 100 packages in 3.68s
+      Built hermes-agent @ file:///C:/Users/MY%20LOQ/AppData/Local/hermes/hermes-agent                                  Prepared 5 packages in 7.31s
+Uninstalled 5 packages in 263ms
+Installed 5 packages in 140ms
+ - hermes-agent==0.19.0 (from file:///C:/Users/MY%20LOQ/AppData/Local/hermes/hermes-agent)
+ + hermes-agent==0.20.0 (from file:///C:/Users/MY%20LOQ/AppData/Local/hermes/hermes-agent)
+ - httplib2==0.31.2
+ + httplib2==0.32.0
+ - mcp==1.26.0
+ + mcp==1.28.1
+ - pillow==12.2.0
+ + pillow==12.3.0
+ - pyasn1==0.6.3
+ + pyasn1==0.6.4
+✓ Dependency installation recovered — your install is healthy again.
+
+██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗
+██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
+███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║
+██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║
+██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║
+╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
+
+╭────────────── Hermes Agent v0.20.0 (2026.8.3) · upstream 6e9cae6a · local 01a1037d (+1 carried commit) ──────────────╮
+│                                              Available Tools                                                         │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        bfl: bfl_flux3_get_result, ...                                          │
+│        ⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀        browser: browser_back, browser_click, ...                               │
+│        ⠀⢀⣠⣴⣶⠿⠋⣩⡿⣿⡿⠻⣿⡇⢠⡄⢸⣿⠟⢿⣿⢿⣍⠙⠿⣶⣦⣄⡀⠀        clarify: clarify                                                        │
+│        ⠀⠀⠉⠉⠁⠶⠟⠋⠀⠉⠀⢀⣈⣁⡈⢁⣈⣁⡀⠀⠉⠀⠙⠻⠶⠈⠉⠉⠀⠀        code_execution: execute_code                                            │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡿⠛⢁⡈⠛⢿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        computer_use: computer_use                                              │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⣿⣦⣤⣈⠁⢠⣴⣿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        cronjob: cronjob                                                        │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⢿⣿⣦⡉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        delegation: delegate_task                                               │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣦⣈⠛⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        file: patch, read_file, search_files, write_file                        │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⠦⠈⠙⠿⣦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        (and 10 more toolsets...)                                               │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣤⡈⠁⢤⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀                                                                                │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠷⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        Available Skills                                                        │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠑⢶⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        autonomous-ai-agents: claude-code, codex, +3 more                       │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠁⢰⡆⠈⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        creative: architecture-diagram, ascii-art, +14 more                     │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⠈⣡⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        cybersecurity: malware-analysis-platform, +3 more                       │
+│        ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀        data-science: jupyter-live-kernel                                       │
+│                                              email: himalaya                                                         │
+│  nemotron-3-ultra-550b-a55b · Nous Research  general: hermes-desktop-plugins, yuanbao                                │
+│         E:\PROJECT INDUSTRY\MALINFO          github: codebase-inspection, github-auth, +4 more                       │
+│       Session: 20260806_203926_605a93        media: gif-search, heartmula, songsee, youtube-content                  │
+│                                              mlops: huggingface-hub, llama-cpp, +2 more                              │
+│                                              note-taking: obsidian                                                   │
+│                                              productivity: airtable, docx, google-workspace, maps, +8 more           │
+│                                              research: arxiv, blogwatcher, cybersecurity-research, +3 more           │
+│                                              smart-home: openhue                                                     │
+│                                              software-development: deployment-readiness-assessment, +10 more         │
+│                                                                                                                      │
+│                                              34 tools · 74 skills · /help for commands                               │
+│                                              ⚠ update available                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Welcome to Hermes Agent! Type your message or /help for commands.
+✦ Tip: GPT-5 and Codex use 'developer' role instead of 'system' in the message format.
+
+
+────────────────────────────────────────
+● analyze my complete project based on this give me exact steps to be followed to make this tool availbale online
+free,smooth and fast
+Initializing agent...
+────────────────────────────────────────
+
+  ┊ 🔎 preparing search_files…
+  ┊ 🔎 find      *  2.3s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         ls -la E:\PROJECT\INDUSTRY\MALINFO  0.2s [exit 2]
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         ls -la /c/Users/MY\ LOQ/PROJECT\ INDUSTRY/MALINFO  0.2s [exit 2]
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         find /c/Users -name "MALINFO" -type d 2>/dev/null  34.7s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         pwd + 1 command  0.2s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      README.md  0.7s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 preparing read_file…
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      docker-compose.yml  1.1s
+  ┊ 📖 read      docker-compose.prod.yml  1.0s
+  ┊ 📖 read      Makefile  1.1s
+  ┊ 🔎 preparing search_files…
+  ┊ 🔎 find      *  0.5s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         ls -la /e/PROJECT\ INDUSTRY/MALINFO/backend  0.2s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         find /e/PROJECT\ INDUSTRY/MALINFO/backend/app -type f -name "*.py"  0.2s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      main.py  0.7s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      config.py  1.1s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      vm_orchestrator.py  0.7s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      vm_orchestrator.py L500  0.7s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      vm_orchestrator.py  1.0s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      guest_agent.py  0.8s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      agency_notification.py  0.7s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         ls -la /e/PROJECT\ INDUSTRY/MALINFO/deploy  0.3s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      nginx.prod.conf  0.9s
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         ls -la /e/PROJECT\ INDUSTRY/MALINFO/frontend  0.2s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      index.html  0.8s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      .env.example  0.8s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      scripts  0.5s [File not found: scripts]
+  ┊ 💻 preparing terminal…
+  ┊ 💻 $         ls -la /e/PROJECT\ INDUSTRY/MALINFO/scripts  0.2s
+  ┊ 📖 preparing read_file…
+  ┊ 📖 read      pyproject.toml  0.7s
+
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+Now I have a complete picture of the project. Let me provide you with the exact steps to deploy MALINFO online for free, smooth, and fast.
+
+
+
+MALINFO — Free Production Deployment Guide (Oracle Cloud Free Tier + Cloudflare Tunnel)
+
+Architecture Summary
+- Compute: Oracle Cloud Always Free (4 ARM OCPU, 24GB RAM, 200GB storage) — $0/month
+- Domain: DuckDNS (malinfo.duckdns.org) — Free
+- TLS/WAF/DDoS: Cloudflare Tunnel — Free
+- Email: Gmail SMTP (App Password) — Free (500/day)
+- Database: PostgreSQL 16 in Docker
+- Cache: Redis 7 in Docker
+- Sandbox: Built-in VM Orchestrator (libvirt/QEMU/KVM) — No CAPEv2 needed
+
+
+
+Step 1: Provision Oracle Cloud Free Tier VM
+
+bash
+1. Sign up at https://cloud.oracle.com/free
+2. Create VM instance:
+- Shape: VM.Standard.A1.Flex (ARM)
+- OCPUs: 4
+- Memory: 24 GB
+- Boot volume: 200 GB
+- OS: Ubuntu 22.04 or 24.04 Minimal
+- SSH keys: Add your public key
+- Network: Allow ports 22, 80, 443 (ingress)
+
+
+After VM is running:
+bash
+SSH in
+ssh ubuntu@<YOUR_ORACLE_VM_PUBLIC_IP>
+
+Update & install prerequisites
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io docker-compose-v2 git curl jq qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virtinst cloud-utils-genisoimage
+sudo systemctl enable --now docker libvirtd
+sudo usermod -aG docker,libvirt,kvm $USER
+newgrp docker
+
+
+
+
+Step 2: Configure KVM for Nested Virtualization (Required for VM Sandbox)
+
+bash
+Check nested virtualization support
+cat /sys/module/kvm_intel/parameters/nested  # or kvm_amd for AMD
+Should return 'Y' — if not, Oracle ARM supports it by default
+
+Verify KVM access
+ls -la /dev/kvm
+Should be accessible (crw-rw---- root kvm)
+
+
+
+
+Step 3: Setup DuckDNS Domain
+
+bash
+1. Go to https://www.duckdns.org → Sign in with GitHub
+2. Create subdomain: malinfo (or your choice) → malinfo.duckdns.org
+3. Note your token
+
+On the VM, create auto-update script:
+sudo tee /usr/local/bin/duckdns-update.sh > /dev/null <<'EOF'
+#!/bin/bash
+DOMAIN="malinfo"
+TOKEN="YOUR_DUCKDNS_TOKEN_HERE"
+curl -s "https://www.duckdns.org/update?domains=${DOMAIN}&token=${TOKEN}&ip="
+EOF
+
+sudo chmod +x /usr/local/bin/duckdns-update.sh
+
+Run once to test
+/usr/local/bin/duckdns-update.sh
+
+Add to crontab (every 5 min)
+(crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/duckdns-update.sh") | crontab -
+
+
+
+
+Step 4: Setup Cloudflare Tunnel (Free TLS + WAF + DDoS)
+
+bash
+On the VM, install cloudflared
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+sudo dpkg -i cloudflared.deb
+
+Authenticate (opens browser — run on your LOCAL machine, not the VM):
+cloudflared tunnel login
+
+Instead, create tunnel via dashboard (easier):
+1. Go to https://dash.cloudflare.com → Zero Trust → Networks → Tunnels
+2. Create tunnel → Name: malinfo → Save
+3. Copy the Tunnel ID (e.g., abc123...xyz)
+4. Public hostname: malinfo.duckdns.org → HTTPS → localhost:443
+5. Save
+
+On VM, create config:
+sudo mkdir -p /etc/cloudflared
+sudo tee /etc/cloudflared/config.yml > /dev/null <<EOF
+tunnel: YOUR_TUNNEL_ID_HERE
+credentials-file: /etc/cloudflared/YOUR_TUNNEL_ID_HERE.json
+ingress:
+  - hostname: malinfo.duckdns.org
+    service: https://localhost:443
+    originRequest:
+      noTLSVerify: true
+  - service: http_status:404
+EOF
+
+Download credentials file from dashboard → Save as /etc/cloudflared/<TUNNEL_ID>.json
+
+Install as service
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+sudo systemctl status cloudflared
+
+
+
+
+Step 5: Deploy MALINFO
+
+bash
+On the VM
+cd /opt
+sudo git clone https://github.com/xC0D3F4TH3R/MALINFO.git
+cd MALINFO
+
+Generate secrets (SAVE THE OUTPUT!)
+make secrets
+
+Copy and configure environment
+cp .env.example .env
+EDIT .env with your values (see Step 6)
+
+Deploy production stack
+make prod
+
+
+
+
+Step 6: Configure .env — CRITICAL VALUES
+
+Edit /opt/MALINFO/.env with these exact values:
+
+bash
+GENERAL
+ENVIRONMENT=production
+DEBUG=false
+API_PREFIX=/api
+
+STORAGE (use host paths for persistence)
+STORAGE_DIR=/opt/malinfo/storage
+UPLOAD_DIR=/opt/malinfo/storage/uploads
+REPORT_DIR=/opt/malinfo/storage/reports
+PCAP_DIR=/opt/malinfo/storage/pcaps
+MAX_UPLOAD_SIZE_MB=250
+
+DATABASE (Docker Compose handles this — keep as-is)
+DATABASE_URL=postgresql+asyncpg://malinfo:${POSTGRES_PASSWORD}@db:5432/malinfo
+REDIS_URL=redis://redis:6379/0
+
+VM ORCHESTRATOR (Built-in sandbox — ENABLE THIS)
+VM_ORCHESTRATOR_ENABLED=true
+VM_STORAGE_DIR=/opt/malinfo/storage/vms
+VM_ISO_DIR=/opt/malinfo/storage/isos
+VM_AGENT_PORT=9090
+LIBVIRT_URI=qemu:///system
+
+SANDBOX (Legacy CAPEv2 — DISABLED)
+SANDBOX_ENABLED=false
+
+THREAT INTEL (Optional — add your API keys if you have them)
+VIRUSTOTAL_API_KEY=
+OTX_API_KEY=
+ABUSEIPDB_API_KEY=
+MISP_URL=
+MISP_API_KEY=
+
+ICAP / MONITORING (Optional — disable for now)
+ICAP_ENABLED=false
+MONITOR_ENABLED=false
+
+WEBSOCKET
+WS_ENABLED=true
+WS_PING_INTERVAL=30
+
+AUTH — GENERATE WITH: openssl rand -base64 32
+SECRET_KEY=<OUTPUT_FROM_MAKE_SECRETS>
+
+CORS — YOUR DOMAIN ONLY
+ALLOWED_ORIGINS=["https://malinfo.duckdns.org"]
+
+RATE LIMITING
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+
+EMAIL / AGENCY NOTIFICATIONS — USE GMAIL APP PASSWORD
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=ary4ntom4r@gmail.com
+SMTP_PASSWORD=<YOUR_16_CHAR_GMAIL_APP_PASSWORD>
+SMTP_TLS=true
+NOTIFICATION_FROM_EMAIL=noreply@malinfo.duckdns.org
+AGENCY_NOTIFICATION_EMAIL=ary4ntom4r@gmail.com
+
+DECOMPILER (Optional)
+GHIDRA_PATH=/opt/ghidra
+RETDEC_PATH=/usr/bin/retdec-decompiler
+
+
+Generate Gmail App Password:
+1. Go to https://myaccount.google.com/security → 2-Step Verification → App passwords
+2. Create app password for "Mail" → Copy 16-char password
+3. Use that as SMTP_PASSWORD
+
+
+
+Step 7: Generate TLS Certificates (Self-Signed for Cloudflare Tunnel)
+
+bash
+Since Cloudflare terminates TLS, use self-signed certs internally
+make certs MODE=selfsigned DOMAIN=malinfo.duckdns.org EMAIL=admin@malinfo.duckdns.org
+
+This creates:
+deploy/certs/fullchain.pem
+deploy/certs/privkey.pem
+
+
+
+
+Step 8: Verify Deployment
+
+bash
+Check all services healthy
+make health
+
+Expected output: all services "healthy" or "running"
+Check individual services:
+make status
+
+View logs if needed
+make logs SERVICE=backend
+make logs SERVICE=nginx
+
+
+
+
+Step 9: Upload ISO & Create VM Template (One-Time Setup)
+
+bash
+1. Download Windows 10/11 ISO or Ubuntu 22.04 ISO to your local machine
+2. Upload via API (or use the frontend at https://malinfo.duckdns.org/vm)
+
+Via API example:
+curl -X POST "https://malinfo.duckdns.org/api/vm/isos/upload" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -F "file=@/path/to/Win10_22H2.iso" \
+  -F "os_type=windows" \
+  -F "os_version=10" \
+  -F "name=win10-22h2.iso"
+
+3. Create template (takes 10-30 min):
+curl -X POST "https://malinfo.duckdns.org/api/vm/templates" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Win10-Clean",
+    "os_type": "windows",
+    "os_version": "10",
+    "iso_name": "win10-22h2.iso",
+    "disk_size_gb": 60,
+    "memory_mb": 4096,
+    "vcpus": 2,
+    "network_mode": "isolated"
+  }'
+
+4. Poll until state = "ready":
+curl "https://malinfo.duckdns.org/api/vm/templates" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+
+
+
+
+Step 10: Test End-to-End
+
+bash
+1. Access dashboard: https://malinfo.duckdns.org
+2. Login (default: admin / password from make secrets output)
+3. Go to VM Management → Templates → Verify template is "ready"
+4. Go to Samples → Upload a test malware sample (EICAR test file)
+5. Submit for dynamic analysis using your template
+6. Watch real-time WebSocket updates on Sandbox page
+7. Verify agency notification email arrives at ary4ntom4r@gmail.com
+
+
+
+
+Step 11: Harden & Optimize (Post-Deploy)
+
+bash
+1. Enable auto-updates for security
+sudo apt install -y unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+2. Setup log rotation
+sudo tee /etc/logrotate.d/malinfo > /dev/null <<'EOF'
+/opt/MALINFO/logs/*.log {
+    daily
+    rotate 14
+    compress
+    missingok
+    notifempty
+    create 0640 root docker
+}
+EOF
+
+3. Setup backup cron (daily at 3 AM)
+(crontab -l 2>/dev/null; echo "0 3 * * * cd /opt/MALINFO && make backup") | crontab -
+
+4. Monitor disk space
+df -h /opt/malinfo
+
+
+
+
+Step 12: Access URLs
+
+| Service        | URL                                                         |
+|----------------|-------------------------------------------------------------|
+| Main Dashboard | https://malinfo.duckdns.org                                 |
+| API Health     | https://malinfo.duckdns.org/api/health                      |
+| Grafana        | https://malinfo.duckdns.org:3000 (admin / GRAFANA_PASSWORD) |
+| Prometheus     | https://malinfo.duckdns.org:9090                            |
+
+
+
+Cost Breakdown — $0/Month Forever
+
+| Component                             | Provider                 | Cost     |
+|---------------------------------------|--------------------------|----------|
+| Compute (4 ARM OCPU, 24GB RAM, 200GB) | Oracle Cloud Always Free | $0       |
+| Domain (malinfo.duckdns.org)          | DuckDNS                  | $0       |
+| TLS + WAF + DDoS                      | Cloudflare Tunnel        | $0       |
+| Email (Agency notifications)          | Gmail SMTP               | $0       |
+| TOTAL                                 |                          | $0/month |
+
+
+
+Troubleshooting Quick Reference
+
+Issue: libvirt not found
+Fix: sudo apt install -y libvirt-daemon-system qemu-kvm && sudo usermod -aG libvirt,kvm $USER && newgrp docker
+────────────────────────────────────────
+Issue: VM template stuck "building"
+Fix: Check make logs SERVICE=backend — ensure nested virt enabled
+────────────────────────────────────────
+Issue: Cloudflare Tunnel 502
+Fix: Verify cloudflared service running; check config.yml points to https://localhost:443
+────────────────────────────────────────
+Issue: Email not sending
+Fix: Verify Gmail App Password (not regular password); check SMTP_PORT=587, SMTP_TLS=true
+────────────────────────────────────────
+Issue: WebSocket not connecting
+Fix: Nginx config must have proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";
+────────────────────────────────────────
+Issue: Out of disk
+Fix: docker system prune -af --volumes then check /opt/malinfo/storage
+
+
+
+Next Steps After Deploy
+
+1. Upload ISOs: Windows 10/11, Ubuntu 22.04/24.04, Android x86
+2. Build templates: One per OS (10-30 min each)
+3. Configure YARA feeds: make update-yara
+4. Configure threat intel feeds: make update-feeds
+5. Test agency emails: Submit a public report via /api/public/report/file
+6. Add team users: Dashboard → Administration → User Management
+7. Enable monitoring: docker compose -f docker-compose.prod.yml --profile monitoring up -d
+
+
+
+That's it. Your government-grade malware analysis platform is now live at https://malinfo.duckdns.org for $0/month with full dynamic sandbox, real-time WebSocket monitoring, and automatic agency notificationsto ary4ntom4r@gmail.com.
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ⚕ nemotron-3-ultra-550b-a55b │ 96.7K/1M │ [█░░░░░░░░░] 10% │ 17m │ ⏲ 6m 1s │ ✓ 3m
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+AUTH — GENERATE WITH: openssl rand -base64 32
+SECRET_KEY=<OUTPUT_FROM_MAKE_SECRETS>
+
+CORS — YOUR DOMAIN ONLY
+ALLOWED_ORIGINS=["https://malinfo.duckdns.org"]
+
+RATE LIMITING
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+
+EMAIL / AGENCY NOTIFICATIONS — USE GMAIL APP PASSWORD
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=ary4ntom4r@gmail.com
+SMTP_PASSWORD=<YOUR_16_CHAR_GMAIL_APP_PASSWORD>
+SMTP_TLS=true
+NOTIFICATION_FROM_EMAIL=noreply@malinfo.duckdns.org
+AGENCY_NOTIFICATION_EMAIL=ary4ntom4r@gmail.com
+
+DECOMPILER (Optional)
+GHIDRA_PATH=/opt/ghidra
+RETDEC_PATH=/usr/bin/retdec-decompiler
+
+
+Generate Gmail App Password:
+1. Go to https://myaccount.google.com/security → 2-Step Verification → App passwords
+2. Create app password for "Mail" → Copy 16-char password
+3. Use that as SMTP_PASSWORD
+
+
+
+Step 7: Generate TLS Certificates (Self-Signed for Cloudflare Tunnel)
+
+bash
+Since Cloudflare terminates TLS, use self-signed certs internally
+make certs MODE=selfsigned DOMAIN=malinfo.duckdns.org EMAIL=admin@malinfo.duckdns.org
+
+This creates:
+deploy/certs/fullchain.pem
+deploy/certs/privkey.pem
+
+
+
+
+Step 8: Verify Deployment
+
+bash
+Check all services healthy
+make health
+
+Expected output: all services "healthy" or "running"
+Check individual services:
+make status
+
+View logs if needed
+make logs SERVICE=backend
+make logs SERVICE=nginx
+
+
+
+
+Step 9: Upload ISO & Create VM Template (One-Time Setup)
+
+bash
+1. Download Windows 10/11 ISO or Ubuntu 22.04 ISO to your local machine
+2. Upload via API (or use the frontend at https://malinfo.duckdns.org/vm)
+
+Via API example:
+curl -X POST "https://malinfo.duckdns.org/api/vm/isos/upload" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -F "file=@/path/to/Win10_22H2.iso" \
+  -F "os_type=windows" \
+  -F "os_version=10" \
+  -F "name=win10-22h2.iso"
+
+3. Create template (takes 10-30 min):
+curl -X POST "https://malinfo.duckdns.org/api/vm/templates" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Win10-Clean",
+    "os_type": "windows",
+    "os_version": "10",
+    "iso_name": "win10-22h2.iso",
+    "disk_size_gb": 60,
+    "memory_mb": 4096,
+    "vcpus": 2,
+    "network_mode": "isolated"
+  }'
+
+4. Poll until state = "ready":
+curl "https://malinfo.duckdns.org/api/vm/templates" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+
+
+
+
+Step 10: Test End-to-End
+
+bash
+1. Access dashboard: https://malinfo.duckdns.org
+2. Login (default: admin / password from make secrets output)
+3. Go to VM Management → Templates → Verify template is "ready"
+4. Go to Samples → Upload a test malware sample (EICAR test file)
+5. Submit for dynamic analysis using your template
+6. Watch real-time WebSocket updates on Sandbox page
+7. Verify agency notification email arrives at ary4ntom4r@gmail.com
+
+
+
+
+Step 11: Harden & Optimize (Post-Deploy)
+
+bash
+1. Enable auto-updates for security
+sudo apt install -y unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+2. Setup log rotation
+sudo tee /etc/logrotate.d/malinfo > /dev/null <<'EOF'
+/opt/MALINFO/logs/*.log {
+    daily
+    rotate 14
+    compress
+    missingok
+    notifempty
+    create 0640 root docker
+}
+EOF
+
+3. Setup backup cron (daily at 3 AM)
+(crontab -l 2>/dev/null; echo "0 3 * * * cd /opt/MALINFO && make backup") | crontab -
+
+4. Monitor disk space
+df -h /opt/malinfo
+
+
+
+
+Step 12: Access URLs
+
+| Service        | URL                                                         |
+|----------------|-------------------------------------------------------------|
+| Main Dashboard | https://malinfo.duckdns.org                                 |
+| API Health     | https://malinfo.duckdns.org/api/health                      |
+| Grafana        | https://malinfo.duckdns.org:3000 (admin / GRAFANA_PASSWORD) |
+| Prometheus     | https://malinfo.duckdns.org:9090                            |
+
+
+
+Cost Breakdown — $0/Month Forever
+
+| Component                             | Provider                 | Cost     |
+|---------------------------------------|--------------------------|----------|
+| Compute (4 ARM OCPU, 24GB RAM, 200GB) | Oracle Cloud Always Free | $0       |
+| Domain (malinfo.duckdns.org)          | DuckDNS                  | $0       |
+| TLS + WAF + DDoS                      | Cloudflare Tunnel        | $0       |
+| Email (Agency notifications)          | Gmail SMTP               | $0       |
+| TOTAL                                 |                          | $0/month |
+
+
+
+Troubleshooting Quick Reference
+
+Issue: libvirt not found
+Fix: sudo apt install -y libvirt-daemon-system qemu-kvm && sudo usermod -aG libvirt,kvm $USER && newgrp docker
+────────────────────────────────────────
+Issue: VM template stuck "building"
+Fix: Check make logs SERVICE=backend — ensure nested virt enabled
+────────────────────────────────────────
+Issue: Cloudflare Tunnel 502
+Fix: Verify cloudflared service running; check config.yml points to https://localhost:443
+────────────────────────────────────────
+Issue: Email not sending
+Fix: Verify Gmail App Password (not regular password); check SMTP_PORT=587, SMTP_TLS=true
+────────────────────────────────────────
+Issue: WebSocket not connecting
+Fix: Nginx config must have proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";
+────────────────────────────────────────
+Issue: Out of disk
+Fix: docker system prune -af --volumes then check /opt/malinfo/storage
+
+
+
+Next Steps After Deploy
+
+1. Upload ISOs: Windows 10/11, Ubuntu 22.04/24.04, Android x86
+2. Build templates: One per OS (10-30 min each)
+3. Configure YARA feeds: make update-yara
+4. Configure threat intel feeds: make update-feeds
+5. Test agency emails: Submit a public report via /api/public/report/file
+6. Add team users: Dashboard → Administration → User Management
+7. Enable monitoring: docker compose -f docker-compose.prod.yml --profile monitoring up -d
+
+
+
+That's it. Your government-grade malware analysis platform is now live at https://malinfo.duckdns.org for $0/month with full dynamic sandbox, real-time WebSocket monitoring, and automatic agency notificationsto ary4ntom4r@gmail.com.
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⠋ ( ˘▽˘)っ 🐍 Running code import re # Read the skill file skill_path = r"C:\Users\MY LOQ\AppData\Local\hermes\skills\cybersecurity\malware-analysis-platform\SKILL.md" with open(skill_path, 'r', encoding='utf-8') as f: content = f.read() # Find the Reference Documents section and add the new reference old_text = """## Reference Documents (This Session) - `references/operations-runbook.md` - Complete setup & daily operations guide (zero-to-running + daily commands) - `references/production-deployment-checklist.md` - Pre/post-deployment verification checklist - `references/government-delivery-checklist.md` - Governmentdelivery acceptance criteria & sign-off - `references/security-hardening-fixes.md` - Bandit fixes, JWT import, f-string, path handling fixes - `references/malware-analysis-methodology.md` - Analysis methodology framework - `references/yara-rule-authoring.md` - YARA rule authoring best practices - `references/free-deployment-workflow.md` - Free deployment workflow (Oracle Cloud + DuckDNS + Cloudflare Tunnel) - `references/self-contained-vm-orchestration.md` - Complete architecture and deployment guide - `references/vm-orchestrator-api.md` - Complete API endpoint documentation - `references/agency-notification-system.md`- Agency notification system specification""" new_text = """## Reference Documents (This Session) - `references/operations-runbook.md` - Complete setup & daily operations guide (zero-to-running + daily commands) - `references/production-deployment-checklist.md` - Pre/post-deployment verification checklist - `references/government-delivery-checklist.md` - Government delivery acceptance criteria & sign-off - `references/security-hardening-fixes.md` - Bandit fixes, JWT import, f-string, path handling fixes - `references/malware-analysis-methodology.md` - Analysis methodology framework - `references/yara-rule-authoring.md`- YARA rule authoring best practices - `references/free-deployment-workflow.md` - Free deployment workflow (Oracle Cloud + DuckDNS + Cloudflare Tunnel) - `references/malinfo-v2-deployment-guide.md` - **Project-specific exact deployment guide for MALINFO v2.0.0** (copy-paste ready) - `references/self-contained-vm-orchestration.md` - Complete architecture and deployment guide - `references/vm-orchestrator-api.md` - Complete API endpoint documentation - `references/agency-notification-system.md` - Agency notification system specification""" if old_text in content: content = content.replace(old_text, new_text) with open(skill_path, 'w', encoding='utf-8') as f: f.write(content) print("Patch applied successfully!") else: print("Could not find exact match. Searching for similar content...") # Try to find the section if "references/ ⚕ nemotron-3-ultra-550b-a55b │ 96.7K/1M │ [█░░░░░░░░░] 10% │ 19m │ ⏲ 6m 1s │ ✓ 4m
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -424,6 +424,32 @@ sudo cloudflared service install && sudo systemctl enable --now cloudflared
 # Access: https://your-subdomain.duckdns.org
 ```
 
+### 🚀 Quick Deploy Script (Recommended)
+
+```bash
+# Make executable (first time only)
+chmod +x deploy.sh
+
+# Self-hosted (your own VM/VPS) - FULL CONTROL, KVM SUPPORT
+./deploy.sh selfhosted malinfo.yourdomain.gov admin@yourdomain.gov "SecurePass123!"
+
+# Fly.io - FREE TIER WITH KVM (only free option with dynamic sandbox)
+./deploy.sh fly malinfo.yourdomain.gov
+
+# Railway - EASIEST, NO KVM (static analysis only)
+./deploy.sh railway malinfo.yourdomain.gov
+```
+
+**What the script does automatically:**
+1. ✅ Prompts for admin credentials (or accepts as arguments)
+2. ✅ Generates secure secrets (SECRET_KEY, DB passwords, etc.)
+3. ✅ Creates `.env` template with all required variables
+4. ✅ Sets up Docker storage directories
+5. ✅ Generates TLS certificates
+6. ✅ Builds and starts all services via Docker Compose
+7. ✅ Creates the initial **admin user** with your credentials
+8. ✅ Prints access URLs and next steps
+
 ---
 
 ## 🛡️ Security Hardening

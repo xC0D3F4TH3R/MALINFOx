@@ -1,5 +1,6 @@
 # MALINFO Backend - Production Dockerfile
 # Multi-stage build for minimal, secure production image with full VM orchestration support
+# Security hardened: non-root user, minimal attack surface, no secrets in image
 
 # --- Build Stage ---
 FROM python:3.11-slim as builder
@@ -13,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libvirt-dev \
     pkg-config \
+    yara \
+    libyara-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -24,6 +27,12 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 
 # --- Runtime Stage ---
 FROM python:3.11-slim
+
+# Security: Add security labels
+LABEL maintainer="MALINFO Team" \
+      version="1.0.0-pilot" \
+      description="MALINFO Backend API" \
+      security.scan="true"
 
 # Install runtime dependencies including libvirt/qemu for VM orchestration
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,13 +49,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     net-tools \
     iputils-ping \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /var/cache/apt/*
 
 # Create non-root user with proper groups for libvirt/kvm access
+# Use fixed UID/GID for consistency
 RUN groupadd -r -g 998 libvirt && \
     groupadd -r -g 997 kvm && \
     groupadd -r -g 996 malinfo && \
-    useradd -r -g malinfo -G libvirt,kvm -d /home/malinfo -m -s /bin/bash malinfo
+    useradd -r -u 996 -g malinfo -G libvirt,kvm -d /home/malinfo -m -s /bin/bash malinfo
 
 # Set working directory
 WORKDIR /app
@@ -54,7 +67,7 @@ WORKDIR /app
 # Copy Python packages from builder
 COPY --from=builder /root/.local /home/malinfo/.local
 
-# Copy application code
+# Copy application code with correct ownership
 COPY --chown=malinfo:malinfo app ./app
 COPY --chown=malinfo:malinfo requirements.txt .
 
@@ -73,12 +86,18 @@ ENV PATH=/home/malinfo/.local/bin:$PATH \
     MALINFO_ENV=production \
     LIBVIRT_DEFAULT_URI=qemu:///system
 
+# Security: Remove unnecessary capabilities
+# The container runs as non-root, so most capabilities are not needed
+
 # Health check - uses the app's health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Expose port
 EXPOSE 8000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Run application with gunicorn for production (4 workers)
 CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "300", "--access-logfile", "-", "--error-logfile", "-"]

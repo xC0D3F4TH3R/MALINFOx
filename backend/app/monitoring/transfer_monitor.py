@@ -10,10 +10,10 @@ import hashlib
 import logging
 import uuid
 from collections import deque
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -30,6 +30,9 @@ from app.reporting.report_generator import (
     save_report,
 )
 from app.sandbox.orchestrator import detonate_sample
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger("malinfo.monitor")
 
@@ -164,7 +167,7 @@ class FileSystemMonitor(FileSystemEventHandler):
                 await self.callback(transfer)
 
         except Exception as exc:
-            logger.error(f"Error processing file event {file_path}: {exc}")
+            logger.exception(f"Error processing file event {file_path}: {exc}")
 
     def _compute_hash(self, file_path: Path) -> str:
         """Compute SHA256 hash of file."""
@@ -354,7 +357,7 @@ class TransferAnalyzer:
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.error(f"Analysis worker error: {exc}")
+                logger.exception(f"Analysis worker error: {exc}")
                 await asyncio.sleep(1)
 
     async def _process_transfer(self, transfer: TransferEvent):

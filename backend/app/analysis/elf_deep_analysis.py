@@ -9,9 +9,12 @@ interpreter path, symbol visibility, init/fini arrays, GO/Rust binary detection.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.analysis.strings_entropy import shannon_entropy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.elf_deep")
 
@@ -269,7 +272,7 @@ def _parse_dynamic_section(dyn_section, elf) -> dict:
             result["plt_rel"] = hex(val)
         elif tag_name == "DT_PLTRELSZ":
             result["plt_rel_sz"] = val
-        elif tag_name == "DT_REL" or tag_name == "DT_RELA":
+        elif tag_name in {"DT_REL", "DT_RELA"}:
             result.setdefault("relocations_dyn", []).append({
                 "type": tag_name,
                 "address": hex(val),

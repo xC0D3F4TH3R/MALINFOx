@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # --- General ---------------------------------------------------------
     APP_NAME: str = "MALINFO"
     ENVIRONMENT: str = "development"        # development | staging | production
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_PREFIX: str = "/api"
 
     # --- Storage -----------------------------------------------------------
@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 250
 
     # --- Database -----------------------------------------------------------
+    # Defaults to SQLite for development; MUST be overridden via .env in production
+    # In production, this MUST be set to PostgreSQL via environment variable
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR / 'storage' / 'malinfo.db'}"
 
     # --- YARA ----------------------------------------------------------------
@@ -98,9 +100,9 @@ class Settings(BaseSettings):
     WS_PING_INTERVAL: int = 30
 
     # --- Auth ------------------------------------------------------------------
-    SECRET_KEY: str = "CHANGE_ME_BEFORE_DEPLOYMENT_USE_A_REAL_SECRET"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    SECRET_KEY: str = ""
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
     ACCOUNT_LOCKOUT_MINUTES: int = 15
 
@@ -123,8 +125,8 @@ class Settings(BaseSettings):
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     SMTP_TLS: bool = True
-    NOTIFICATION_FROM_EMAIL: str = "noreply@malinfo.gov"
-    AGENCY_NOTIFICATION_EMAIL: str = "ary4ntom4r@gmail.com"
+    NOTIFICATION_FROM_EMAIL: str = ""
+    AGENCY_NOTIFICATION_EMAIL: str = ""
 
 # --- Decompiler Integration ----------------------------------------------
     GHIDRA_PATH: str = "/opt/ghidra"
@@ -133,6 +135,25 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Validation for production environment
+if settings.ENVIRONMENT == "production":
+    missing = []
+    if not settings.SECRET_KEY or settings.SECRET_KEY.startswith("CHANGE_ME"):
+        missing.append("SECRET_KEY")
+    if not settings.DATABASE_URL or settings.DATABASE_URL.startswith("sqlite"):
+        missing.append("DATABASE_URL (must be PostgreSQL in production)")
+    if not settings.NOTIFICATION_FROM_EMAIL:
+        missing.append("NOTIFICATION_FROM_EMAIL")
+    if not settings.AGENCY_NOTIFICATION_EMAIL:
+        missing.append("AGENCY_NOTIFICATION_EMAIL")
+    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        missing.append("SMTP configuration (SMTP_HOST, SMTP_USER, SMTP_PASSWORD)")
+    if missing:
+        raise RuntimeError(
+            f"Production deployment requires the following environment variables: {', '.join(missing)}. "
+            f"Set them in .env or your secrets manager."
+        )
 
 # Ensure storage directories exist at import time
 for _dir in (settings.UPLOAD_DIR, settings.REPORT_DIR, settings.PCAP_DIR):

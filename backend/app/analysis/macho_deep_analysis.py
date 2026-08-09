@@ -9,7 +9,10 @@ analysis, hardened runtime flags, load command deep dive.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.macho_deep")
 
@@ -114,7 +117,7 @@ def analyze_macho_deep(file_path: Path) -> dict:
                 _parse_segment(cmd, header, result)
             elif cmd_type == LC_CODE_SIGNATURE:
                 result["code_signature"] = _parse_code_signature(cmd, header, file_path)
-            elif cmd_type == LC_DYLD_INFO or cmd_type == LC_DYLD_INFO_ONLY:
+            elif cmd_type in (LC_DYLD_INFO, LC_DYLD_INFO_ONLY):
                 result["dyld_info"] = _parse_dyld_info(cmd, header)
             elif cmd_type == LC_BUILD_VERSION:
                 result["build_version"] = _parse_build_version(cmd)
@@ -129,7 +132,7 @@ def analyze_macho_deep(file_path: Path) -> dict:
                 _parse_dylib(cmd, result)
             elif cmd_type == LC_RPATH:
                 _parse_rpath(cmd, result)
-            elif cmd_type == LC_ENCRYPTION_INFO or cmd_type == LC_ENCRYPTION_INFO_64:
+            elif cmd_type in (LC_ENCRYPTION_INFO, LC_ENCRYPTION_INFO_64):
                 result["encryption_info"] = _parse_encryption_info(cmd)
             elif cmd_type == LC_DYLD_EXPORTS_TRIE:
                 result["exports_trie"] = _parse_exports_trie(cmd, header)

@@ -11,10 +11,13 @@ from __future__ import annotations
 import hashlib
 import logging
 import xml.etree.ElementTree as ET
-import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.analysis.strings_entropy import shannon_entropy
+
+if TYPE_CHECKING:
+    import zipfile
+    from pathlib import Path
 
 logger = logging.getLogger("malinfo.apk_deep")
 

@@ -3,9 +3,9 @@ from __future__ import annotations
 import shutil
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.pipeline import run_static_analysis
 from app.config import settings
@@ -18,6 +18,13 @@ from app.reporting.report_generator import (
 )
 from app.sandbox.orchestrator import detonate_sample
 from app.schemas import UploadResponse
+from app.security_upload import (
+    get_safe_destination_path,
+    validate_upload_file,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -28,15 +35,30 @@ async def upload_file(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
-    if file.size and file.size > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-        raise HTTPException(413, f"File exceeds {settings.MAX_UPLOAD_SIZE_MB} MB limit")
-
+    # Comprehensive file validation
+    is_valid, error, file_info = await validate_upload_file(file, settings.UPLOAD_DIR)
+    
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error)
+    
+    # Get safe destination path
+    try:
+        dest = get_safe_destination_path(settings.UPLOAD_DIR, file_info["safe_filename"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # Move validated file from temp to final location
+    temp_path = Path(file_info["temp_path"])
+    try:
+        shutil.move(str(temp_path), str(dest))
+    except Exception as e:
+        # Cleanup temp file on error
+        if temp_path.exists():
+            temp_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+    
     sample_id = str(uuid.uuid4())
-    dest = settings.UPLOAD_DIR / f"{sample_id}__{file.filename}"
-
-    with open(dest, "wb") as out:
-        shutil.copyfileobj(file.file, out)
-
+    
     sample = Sample(
         id=sample_id,
         original_filename=file.filename or "unknown",

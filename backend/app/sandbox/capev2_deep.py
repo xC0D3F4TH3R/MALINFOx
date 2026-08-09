@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+import aiohttp
+
 logger = logging.getLogger("malinfo.capev2_deep")
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -399,10 +401,14 @@ class CapeV2Client:
         return sorted(techniques)
     
     def _malscore_to_severity(self, score: int) -> str:
-        if score >= 80: return "critical"
-        if score >= 60: return "high"
-        if score >= 40: return "medium"
-        if score >= 20: return "low"
+        if score >= 80:
+            return "critical"
+        if score >= 60:
+            return "high"
+        if score >= 40:
+            return "medium"
+        if score >= 20:
+            return "low"
         return "info"
     
     def _build_process_tree(self, processes: list[dict]) -> list[dict]:
@@ -480,7 +486,7 @@ class CapeV2Client:
             iocs.append({
                 "type": "dns",
                 "query": dns.get("query", ""),
-                "type": dns.get("type", "A"),
+                "dns_type": dns.get("type", "A"),
                 "answers": dns.get("answers", []),
             })
         

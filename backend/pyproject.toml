@@ -18,11 +18,12 @@ dependencies = [
     "pefile==2024.8.26",
     "pyelftools==0.31",
     "macholib==1.16.3",
-    "yara-python==4.5.1",
-    "ssdeep==3.4",
+    # "yara-python==4.5.1",  # YARA rule scanning - requires Microsoft Visual C++ Build Tools on Windows
+    # "ssdeep==3.4",         # fuzzy hashing - requires libfuzzy-dev on Linux/Docker
     "androguard==3.3.5",
     "scapy==2.6.0",
     "dnspython==2.6.1",
+    "python-evtx==0.11.0",
     "requests==2.32.3",
     "aiohttp==3.9.5",
     "jinja2==3.1.4",
@@ -51,8 +52,8 @@ build-backend = "setuptools.build_meta"
 target-version = "py311"
 line-length = 100
 select = ["E", "W", "F", "I", "B", "C4", "UP", "PIE", "T20", "DTZ", "RUF", "ARG", "PTH", "ERA", "PL", "TRY", "NPY", "BLE", "SIM", "TCH", "INT"]
-ignore = ["E501", "B008", "BLE001", "TRY003", "ARG001", "ARG002", "RUF006", "TRY300", "TRY401", "PLR0912", "PLR0913", "PLR0917", "PLC0415", "PLW0603", "UP017", "W291", "W293", "W292", "F401", "PTH110", "PTH116", "PTH118", "SIM105", "SIM102", "B007", "PLW1510", "F841", "B018", "UP042"]
-per-file-ignores = { "tests/*" = ["S101", "S106"] }
+ignore = ["E501", "B008", "BLE001", "TRY003", "ARG001", "ARG002", "RUF006", "TRY300", "TRY401", "PLR0912", "PLR0913", "PLR0917", "PLC0415", "PLW0603", "UP017", "W291", "W293", "W292", "F401", "PTH110", "PTH116", "PTH118", "SIM105", "SIM102", "B007", "PLW1510", "F841", "B018", "UP042", "PLR2004", "TC003", "PTH123", "TRY002", "TRY301", "TRY400", "DTZ003", "E402", "E741", "RUF012"]
+per-file-ignores = { "tests/*" = ["S101", "S106", "T201", "PLR2004"] }
 
 [tool.ruff.format]
 quote-style = "single"
@@ -81,7 +82,7 @@ implicit_reexport = false
 module = [
     "pefile", "pyelftools.*", "macholib.*", "magic", "yara",
     "androguard.*", "scapy.*", "olefile", "olevba", "fitz",
-    "esprima", "ssdeep", "watchdog.*",
+    "esprima", "ssdeep", "watchdog.*", "clr", "Evtx", "Evtx.Evtx",
 ]
 ignore_missing_imports = true
 

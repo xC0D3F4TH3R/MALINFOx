@@ -28,9 +28,9 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.auth.password_security import validate_password, validate_password_strength
 from app.database import AsyncSessionLocal, get_db
 from app.models import Base
 
@@ -189,6 +189,11 @@ class APIKey(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    rotated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    rotation_count: Mapped[int] = mapped_column(Integer, default=0)
+    # For key rotation - stores the previous key hash during transition
+    previous_key_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    previous_key_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 # =============================================================================
@@ -238,6 +243,14 @@ class MFASetupResponse(BaseModel):
 # Password & Token Utilities
 # =============================================================================
 
+from typing import TYPE_CHECKING
+
+from app.config import settings
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+
 def hash_password(password: str) -> str:
     """Hash password using bcrypt."""
     salt = bcrypt.gensalt(rounds=12)
@@ -264,7 +277,7 @@ def hash_token(token: str) -> str:
 
 def create_access_token(user_id: str, username: str, role: UserRole, expires_delta: timedelta | None = None) -> str:
     """Create JWT access token."""
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=480))
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=30))  # Reduced to 30 minutes
     payload = {
         "sub": user_id,
         "username": username,
@@ -274,12 +287,12 @@ def create_access_token(user_id: str, username: str, role: UserRole, expires_del
         "iat": datetime.utcnow(),
         "jti": secrets.token_hex(16),
     }
-    return jwt.encode(payload, "CHANGE_ME_BEFORE_DEPLOYMENT_USE_A_REAL_SECRET", algorithm="HS256")
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
 def create_refresh_token(user_id: str, expires_delta: timedelta | None = None) -> str:
     """Create JWT refresh token."""
-    expire = datetime.utcnow() + (expires_delta or timedelta(days=30))
+    expire = datetime.utcnow() + (expires_delta or timedelta(days=7))  # Reduced to 7 days
     payload = {
         "sub": user_id,
         "type": "refresh",
@@ -287,13 +300,13 @@ def create_refresh_token(user_id: str, expires_delta: timedelta | None = None) -
         "iat": datetime.utcnow(),
         "jti": secrets.token_hex(16),
     }
-    return jwt.encode(payload, "CHANGE_ME_BEFORE_DEPLOYMENT_USE_A_REAL_SECRET", algorithm="HS256")
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
 def decode_token(token: str) -> dict:
     """Decode and validate JWT token."""
     try:
-        return jwt.decode(token, "CHANGE_ME_BEFORE_DEPLOYMENT_USE_A_REAL_SECRET", algorithms=["HS256"])
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -357,7 +370,7 @@ class AuthService:
                 refresh_token_hash=hash_token(refresh_token),
                 ip_address=ip,
                 user_agent=user_agent,
-                expires_at=datetime.utcnow() + timedelta(days=30),
+                expires_at=datetime.utcnow() + timedelta(days=7),  # Match refresh token expiry
             )
             db.add(session)
             await db.commit()
@@ -367,7 +380,7 @@ class AuthService:
             return TokenPair(
                 access_token=access_token,
                 refresh_token=refresh_token,
-                expires_in=480 * 60,
+                expires_in=30 * 60,  # 30 minutes
             )
 
     async def refresh_tokens(self, refresh_token: str, ip: str = "", user_agent: str = "") -> TokenPair:
@@ -402,7 +415,7 @@ class AuthService:
                 refresh_token_hash=hash_token(new_refresh),
                 ip_address=ip,
                 user_agent=user_agent,
-                expires_at=datetime.utcnow() + timedelta(days=30),
+                expires_at=datetime.utcnow() + timedelta(days=7),
             )
             db.add(new_session)
             await db.commit()
@@ -410,7 +423,7 @@ class AuthService:
             return TokenPair(
                 access_token=new_access,
                 refresh_token=new_refresh,
-                expires_in=480 * 60,
+                expires_in=30 * 60,  # 30 minutes
             )
 
     async def revoke_session(self, token: str, user_id: str) -> bool:
@@ -437,7 +450,7 @@ class AuthService:
             result = await db.execute(
                 select(UserSession).where(
                     UserSession.user_id == user_id,
-                    UserSession.revoked == False
+                    not UserSession.revoked
                 )
             )
             sessions = result.scalars().all()
@@ -452,6 +465,11 @@ class AuthService:
 
     async def create_user(self, user_data: UserCreate, creator_id: str | None = None) -> User:
         """Create a new user."""
+        # Validate password strength
+        is_valid, errors = await validate_password(user_data.password)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail="; ".join(errors))
+
         async with AsyncSessionLocal() as db:
             # Check uniqueness
             result = await db.execute(select(User).where(User.username == user_data.username))
@@ -512,6 +530,11 @@ class AuthService:
 
     async def change_password(self, user_id: str, password_data: PasswordChange) -> bool:
         """Change user password."""
+        # Validate new password strength
+        is_valid, errors = await validate_password(password_data.new_password)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail="; ".join(errors))
+
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
@@ -655,6 +678,75 @@ auth_service = AuthService()
 
 
 # =============================================================================
+# API Key Rotation
+# =============================================================================
+
+async def rotate_api_key(api_key_id: str, user_id: str, db: AsyncSession) -> tuple[str, APIKey]:
+    """
+    Rotate an API key - generates a new key while keeping the old one valid for a transition period.
+    Returns the new raw key and the updated APIKey object.
+    """
+    result = await db.execute(select(APIKey).where(APIKey.id == api_key_id, APIKey.user_id == user_id))
+    api_key = result.scalar_one_or_none()
+    
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    
+    if not api_key.is_active:
+        raise HTTPException(status_code=400, detail="Cannot rotate revoked API key")
+    
+    # Generate new key
+    from app.auth.rbac import generate_token, hash_token
+    new_raw_key = f"mk_{generate_token(32)}"
+    new_key_hash = hash_token(new_raw_key)
+    new_key_prefix = new_raw_key[:12]
+    
+    # Store current key as previous for transition period (24 hours)
+    api_key.previous_key_hash = api_key.key_hash
+    api_key.previous_key_expires_at = datetime.utcnow() + timedelta(hours=24)
+    
+    # Update to new key
+    api_key.key_hash = new_key_hash
+    api_key.key_prefix = new_key_prefix
+    api_key.rotated_at = datetime.utcnow()
+    api_key.rotation_count += 1
+    api_key.last_used = None  # Reset last used for new key
+    
+    await db.commit()
+    await db.refresh(api_key)
+    
+    # Log rotation
+    await auth_service._log_audit(
+        user_id, "api_key_rotate", "api_key", api_key_id, "", "",
+        {"rotation_count": api_key.rotation_count}, "success"
+    )
+    
+    return new_raw_key, api_key
+
+
+async def cleanup_rotated_keys(db: AsyncSession) -> int:
+    """
+    Clean up expired previous keys (called periodically).
+    Returns number of keys cleaned up.
+    """
+    result = await db.execute(
+        select(APIKey).where(
+            APIKey.previous_key_hash.isnot(None),
+            APIKey.previous_key_expires_at < datetime.utcnow()
+        )
+    )
+    keys = result.scalars().all()
+    count = 0
+    for key in keys:
+        key.previous_key_hash = None
+        key.previous_key_expires_at = None
+        count += 1
+    if count > 0:
+        await db.commit()
+    return count
+
+
+# =============================================================================
 # FastAPI Dependencies
 # =============================================================================
 
@@ -689,7 +781,7 @@ async def get_current_user(
         select(UserSession).where(
             UserSession.token_hash == token_hash,
             UserSession.user_id == user_id,
-            UserSession.revoked == False
+            not UserSession.revoked
         )
     )
     session = result.scalar_one_or_none()
@@ -763,14 +855,32 @@ async def get_api_key(
         raise HTTPException(status_code=401, detail="Invalid API key format")
 
     key_hash = hash_token(credentials.credentials)
-    result = await db.execute(select(APIKey).where(APIKey.key_hash == key_hash))
+    
+    # Check both current and previous (rotated) keys
+    result = await db.execute(
+        select(APIKey).where(
+            (APIKey.key_hash == key_hash) | (APIKey.previous_key_hash == key_hash)
+        )
+    )
     api_key = result.scalar_one_or_none()
 
     if not api_key or not api_key.is_active:
         raise HTTPException(status_code=401, detail="Invalid or revoked API key")
 
-    if api_key.expires_at and api_key.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=401, detail="API key expired")
+    # Check if using previous (rotated) key
+    if api_key.previous_key_hash == key_hash:
+        # Verify transition period hasn't expired
+        if api_key.previous_key_expires_at and api_key.previous_key_expires_at < datetime.utcnow():
+            raise HTTPException(status_code=401, detail="API key expired (rotation transition period ended)")
+        # Log warning about using old key
+        logger.warning(
+            "API key used during rotation transition period",
+            extra={"api_key_id": api_key.id, "user_id": api_key.user_id}
+        )
+    else:
+        # Check current key expiry
+        if api_key.expires_at and api_key.expires_at < datetime.utcnow():
+            raise HTTPException(status_code=401, detail="API key expired")
 
     # Update last used
     api_key.last_used = datetime.utcnow()
