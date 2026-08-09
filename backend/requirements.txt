@@ -1,5 +1,5 @@
 ##############################################################################
-# MALINFO Backend Requirements
+# MALINFO Backend Requirements - Minimal & Build-Friendly
 # Install with: pip install -r requirements.txt
 ##############################################################################
 
@@ -22,8 +22,6 @@ pefile==2024.8.26          # Windows PE parsing
 pyelftools==0.31           # Linux ELF parsing
 macholib==1.16.3           # macOS Mach-O parsing
 # yara-python==4.5.1       # YARA rule scanning - requires yara + libyara-dev
-# ssdeep==3.4              # fuzzy hashing - requires libfuzzy-dev + setuptools
-androguard==3.3.5          # Android APK analysis
 
 # --- Network forensics -----------------------------------------------------
 scapy==2.6.0                # PCAP parsing / packet crafting
@@ -38,7 +36,7 @@ aiohttp==3.9.5             # Async HTTP for threat intel providers
 
 # --- Reporting ---------------------------------------------------------
 jinja2==3.1.4
-weasyprint==62.3            # HTML -> PDF report export
+# weasyprint==62.3            # HTML -> PDF report export - REMOVED: heavy deps
 
 # --- Authentication & Security -------------------------------------------
 python-jose[cryptography]==3.3.0   # JWT tokens
