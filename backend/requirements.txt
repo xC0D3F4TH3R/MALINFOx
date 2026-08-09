@@ -21,10 +21,8 @@ python-magic==0.4.27       # requires libmagic (apt-get install libmagic1)
 pefile==2024.8.26          # Windows PE parsing
 pyelftools==0.31           # Linux ELF parsing
 macholib==1.16.3           # macOS Mach-O parsing
-# yara-python==4.5.1       # YARA rule scanning - requires Microsoft Visual C++ Build Tools on Windows
-# Install on Linux: apt-get install yara libyara-dev && pip install yara-python
-# Install on Windows: requires Microsoft Visual C++ Build Tools
-ssdeep==3.4                # fuzzy hashing (requires libfuzzy-dev on Linux/Docker)
+# yara-python==4.5.1       # YARA rule scanning - requires yara + libyara-dev
+# ssdeep==3.4              # fuzzy hashing - requires libfuzzy-dev + setuptools
 androguard==3.3.5          # Android APK analysis
 
 # --- Network forensics -----------------------------------------------------
@@ -70,3 +68,4 @@ pytest==8.3.3
 pytest-asyncio==0.23.3
 pytest-cov==5.0.0
 httpx==0.27.2
+setuptools>=65.0.0

@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     yara \
     libyara-dev \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -42,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvirt0 \
     libvirt-glib-1.0-0 \
     libxml2 \
-    libyara5 \
+    yara \
     libffi8 \
     ca-certificates \
     iproute2 \
