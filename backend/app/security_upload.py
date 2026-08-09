@@ -5,16 +5,17 @@ and path traversal protection.
 """
 from __future__ import annotations
 
-import magic
 import os
 import re
+import tempfile
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from fastapi import HTTPException, UploadFile
+import magic
 
 if TYPE_CHECKING:
-    pass
+    from fastapi import UploadFile
 
 # Allowed MIME types for upload
 ALLOWED_MIME_TYPES = {
@@ -24,7 +25,7 @@ ALLOWED_MIME_TYPES = {
     "application/x-mach-binary",  # Mach-O
     "application/vnd.android.package-archive",  # APK
     "application/x-sharedlib",    # Shared libraries
-    
+
     # Archives
     "application/zip",
     "application/x-rar-compressed",
@@ -34,7 +35,7 @@ ALLOWED_MIME_TYPES = {
     "application/x-xz",
     "application/x-tar",
     "application/java-archive",   # JAR
-    
+
     # Documents
     "application/pdf",
     "application/msword",
@@ -45,7 +46,7 @@ ALLOWED_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/rtf",
     "text/plain",
-    
+
     # Scripts
     "text/x-python",
     "text/x-shellscript",
@@ -53,26 +54,26 @@ ALLOWED_MIME_TYPES = {
     "application/javascript",
     "text/x-php",
     "application/x-httpd-php",
-    
+
     # Disk images
     "application/x-iso9660-image",
     "application/vnd.vmware.vmdk",
     "application/x-qemu-disk",
-    
+
     # Memory dumps
     "application/vnd.microsoft.memory-dump",
     "application/x-lime-memory",
-    
+
     # Logs
     "text/x-log",
     "application/x-evtx",
-    
+
     # Certificates/Keys
     "application/x-pem-file",
     "application/x-x509-ca-cert",
     "application/pkcs7-mime",
     "application/pkcs12",
-    
+
     # Images (for steganography analysis)
     "image/png",
     "image/jpeg",
@@ -80,7 +81,7 @@ ALLOWED_MIME_TYPES = {
     "image/bmp",
     "image/tiff",
     "image/webp",
-    
+
     # Other
     "application/octet-stream",  # Generic binary
 }
@@ -130,9 +131,7 @@ MAGIC_BYTES = {
     # WebP
     b"RIFF": "image/webp",  # Need to check for "WEBP" at offset 8
     # ISO
-    b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00": "application/x-iso9660-image",  # Very basic check
-    # ELF (alternative)
-    b"\x7f\x45\x4c\x46": "application/x-executable",
+    b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00": "application/x-iso9660-image",
     # Microsoft Compound Document (OLE)
     b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1": "application/msword",
     # LZMA
@@ -224,20 +223,20 @@ def verify_magic_bytes(file_path: Path) -> tuple[str | None, str | None]:
     try:
         with open(file_path, "rb") as f:
             header = f.read(8192)
-        
+
         # Check known magic bytes
         for magic_bytes, mime_type in MAGIC_BYTES.items():
             if header.startswith(magic_bytes):
                 return mime_type, None
-        
+
         # Special case for WebP (RIFF container)
         if header.startswith(b"RIFF") and b"WEBP" in header[8:16]:
             return "image/webp", None
-        
+
         # Use libmagic as fallback
         detected = detect_mime_from_bytes(header)
         return detected, None
-        
+
     except Exception as e:
         return None, f"Failed to read file header: {e}"
 
@@ -247,31 +246,32 @@ def sanitize_filename(filename: str) -> str:
     Sanitize filename to prevent path traversal and injection.
     """
     # Remove any path components
-    filename = os.path.basename(filename)
-    
+    filename = Path(filename).name
+
     # Remove null bytes
     filename = filename.replace("\x00", "")
-    
+
     # Remove dangerous characters
-    filename = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", filename)
-    
+    filename = re.sub(r'[<>:\"/\\|?*\x00-\x1f]', "_", filename)
+
     # Limit length
     if len(filename) > 255:
-        name, ext = os.path.splitext(filename)
+        name = filename.rsplit(".", 1)[0] if "." in filename else filename
+        ext = "." + filename.rsplit(".", 1)[1] if "." in filename else ""
         filename = name[:255 - len(ext)] + ext
-    
+
     # Prevent hidden files
     if filename.startswith("."):
         filename = "_" + filename[1:]
-    
+
     # Prevent reserved names (Windows)
     reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
                 "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
                 "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"}
-    name, ext = os.path.splitext(filename)
+    name = filename.rsplit(".", 1)[0] if "." in filename else filename
     if name.upper() in reserved:
         filename = "_" + filename
-    
+
     return filename
 
 
@@ -280,11 +280,11 @@ def validate_file_extension(filename: str) -> tuple[bool, str | None]:
     Validate file extension against blocked list.
     Returns (is_allowed, error_message).
     """
-    ext = os.path.splitext(filename.lower())[1]
-    
+    ext = Path(filename).suffix.lower()
+
     if ext in BLOCKED_EXTENSIONS:
         return False, f"File extension '{ext}' is not allowed for security reasons"
-    
+
     return True, None
 
 
@@ -294,11 +294,11 @@ def validate_file_size(file_size: int, mime_type: str) -> tuple[bool, str | None
     Returns (is_allowed, error_message).
     """
     max_size = MAX_FILE_SIZES.get(mime_type, MAX_FILE_SIZES["default"])
-    
+
     if file_size > max_size:
         max_mb = max_size / (1024 * 1024)
         return False, f"File size {file_size / (1024 * 1024):.1f} MB exceeds limit of {max_mb:.0f} MB for {mime_type}"
-    
+
     return True, None
 
 
@@ -309,7 +309,7 @@ def validate_mime_type(mime_type: str) -> tuple[bool, str | None]:
     """
     if mime_type not in ALLOWED_MIME_TYPES:
         return False, f"MIME type '{mime_type}' is not allowed"
-    
+
     return True, None
 
 
@@ -318,14 +318,46 @@ def check_path_traversal(path: Path, base_dir: Path) -> bool:
     Check if a path attempts to escape the base directory.
     """
     try:
-        # Resolve both paths
         resolved_path = path.resolve()
         resolved_base = base_dir.resolve()
-        
-        # Check if the resolved path is within the base directory
         return resolved_path.is_relative_to(resolved_base)
     except Exception:
         return False
+
+
+async def _validate_file_content(temp_path: Path, file_info: dict) -> tuple[bool, str | None]:
+    """Validate file content: magic bytes, MIME type, size."""
+    # Verify magic bytes
+    detected_mime, error = verify_magic_bytes(temp_path)
+    if error:
+        return False, error
+    file_info["detected_mime_type"] = detected_mime
+
+    # Validate detected MIME type
+    allowed, error = validate_mime_type(detected_mime)
+    if not allowed:
+        return False, error
+
+    # Validate size against type-specific limit
+    size = file_info["size"]
+    allowed, error = validate_file_size(size, detected_mime)
+    if not allowed:
+        return False, error
+
+    # Verify MIME type matches extension (optional warning)
+    safe_filename = file_info["safe_filename"]
+    ext = Path(safe_filename).suffix.lower()
+    if ext and not _extension_matches_mime(ext, detected_mime):
+        file_info["extension_mime_mismatch"] = True
+
+    return True, None
+
+
+def _handle_validation_error(temp_path: Path, error: str, file_info: dict) -> tuple[bool, str | None, dict]:
+    """Clean up temp file and return error."""
+    if temp_path.exists():
+        temp_path.unlink()
+    return False, f"Validation failed: {error}", file_info
 
 
 async def validate_upload_file(file: UploadFile, upload_dir: Path) -> tuple[bool, str | None, dict]:
@@ -338,84 +370,64 @@ async def validate_upload_file(file: UploadFile, upload_dir: Path) -> tuple[bool
         "content_type": file.content_type,
         "size": file.size,
     }
-    
+
     # 1. Check filename
     if not file.filename:
         return False, "No filename provided", file_info
-    
+
     # Sanitize filename
     safe_filename = sanitize_filename(file.filename)
     file_info["safe_filename"] = safe_filename
-    
+
     if safe_filename != file.filename:
         file_info["filename_sanitized"] = True
-    
+
     # 2. Validate extension
     allowed, error = validate_file_extension(safe_filename)
     if not allowed:
         return False, error, file_info
-    
+
     # 3. Check content-type header (client-provided, not trusted)
     if file.content_type:
         file_info["client_content_type"] = file.content_type
-    
+
     # 4. Save to temporary location for validation
-    import tempfile
-    import uuid
-    
     temp_dir = Path(tempfile.gettempdir()) / "malinfo_uploads"
     temp_dir.mkdir(parents=True, exist_ok=True)
-    
+
     temp_path = temp_dir / f"{uuid.uuid4()}_{safe_filename}"
-    
+
     try:
         # Stream file to temp location
         size = 0
         chunk_size = 8192
-        
+
         async with temp_path.open("wb") as f:
             while chunk := await file.read(chunk_size):
                 size += len(chunk)
                 # Check size during upload
                 if size > MAX_FILE_SIZES["default"]:
-                    return False, f"File exceeds maximum size of {MAX_FILE_SIZES['default'] / (1024*1024):.0f} MB", file_info
+                    return _handle_validation_error(
+                        temp_path,
+                        f"File exceeds maximum size of {MAX_FILE_SIZES['default'] / (1024*1024):.0f} MB",
+                        file_info,
+                    )
                 f.write(chunk)
-        
+
         file_info["size"] = size
-        
-        # 5. Verify magic bytes
-        detected_mime, error = verify_magic_bytes(temp_path)
-        if error:
-            return False, error, file_info
-        
-        file_info["detected_mime_type"] = detected_mime
-        
-        # 6. Validate detected MIME type
-        allowed, error = validate_mime_type(detected_mime)
-        if not allowed:
-            return False, error, file_info
-        
-        # 7. Validate size against type-specific limit
-        allowed, error = validate_file_size(size, detected_mime)
-        if not allowed:
-            return False, error, file_info
-        
-        # 8. Verify MIME type matches extension (optional warning)
-        ext = os.path.splitext(safe_filename.lower())[1]
-        if ext and not _extension_matches_mime(ext, detected_mime):
-            file_info["extension_mime_mismatch"] = True
-            # Log warning but don't block
-        
+
+        # 5. Validate file content
+        ok, error = await _validate_file_content(temp_path, file_info)
+        if not ok:
+            return _handle_validation_error(temp_path, error, file_info)
+
         file_info["validated"] = True
         file_info["temp_path"] = str(temp_path)
-        
+
         return True, None, file_info
-        
+
     except Exception as e:
-        # Cleanup on error
-        if temp_path.exists():
-            temp_path.unlink()
-        return False, f"Validation failed: {e}", file_info
+        return _handle_validation_error(temp_path, str(e), file_info)
 
 
 def _extension_matches_mime(ext: str, mime_type: str) -> bool:
@@ -454,11 +466,11 @@ def _extension_matches_mime(ext: str, mime_type: str) -> bool:
         ".pfx": "application/pkcs12",
         ".p12": "application/pkcs12",
     }
-    
+
     expected = extension_mime_map.get(ext)
     if expected:
         return expected == mime_type
-    
+
     return True  # Unknown extension, allow
 
 
@@ -467,17 +479,13 @@ def get_safe_destination_path(upload_dir: Path, safe_filename: str) -> Path:
     Get a safe destination path within the upload directory.
     Ensures no path traversal and handles name collisions.
     """
-    # Ensure upload directory exists
     upload_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Base path
+
     base_path = upload_dir / safe_filename
-    
-    # Check for path traversal
+
     if not check_path_traversal(base_path, upload_dir):
         raise ValueError("Path traversal attempt detected")
-    
-    # Handle name collision
+
     counter = 1
     final_path = base_path
     while final_path.exists():
@@ -485,8 +493,8 @@ def get_safe_destination_path(upload_dir: Path, safe_filename: str) -> Path:
         suffix = base_path.suffix
         final_path = upload_dir / f"{stem}_{counter}{suffix}"
         counter += 1
-        
+
         if counter > 10000:
             raise ValueError("Too many files with same name")
-    
+
     return final_path
