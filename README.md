@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/xC0D3F4TH3R/MALINFOx">
-    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/logo.svg" alt="MALINFO Logo" width="220"/>
+    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/logo.svg" alt="MALINFO Logo" width="220"/>
   </a>
 </p>
 
@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/xC0D3F4TH3R/MALINFOx">
-    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/banner.svg" alt="MALINFO Banner" width="100%"/>
+    <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/banner.svg" alt="MALINFO Banner" width="100%"/>
   </a>
 </p>
 
@@ -121,7 +121,7 @@ graph TB
 
 | Dashboard | VM Sandbox | Agency Reports |
 |:---------:|:----------:|:--------------:|
-| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-dashboard.svg) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-vm-sandbox.svg) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-agency-report.svg) |
+| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/demo-dashboard.svg) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/demo-vm-sandbox.svg) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/demo-agency-report.svg) |
 | *Real-time analyst dashboard* | *VM template → analysis → monitoring* | *Auto-formatted gov reports* |
 
 </div>
@@ -157,7 +157,7 @@ make health
 | Component | Provider | Cost | Specs |
 |-----------|----------|------|-------|
 | **Compute + KVM** | Oracle Cloud Always Free | **$0** | 4 ARM OCPU, 24GB RAM, 200GB |
-| **Domain** | DuckDNS (`malinfo.duckdns.org`) | **$0** | Free subdomain + auto-renew |
+| **Domaster** | DuckDNS (`malinfo.duckdns.org`) | **$0** | Free subdomaster + auto-renew |
 | **TLS + WAF** | Cloudflare Tunnel | **$0** | Auto-TLS, DDoS, Rate limiting |
 | **Email (Agencies)** | Gmail SMTP (App Password) | **$0** | 500/day free quota |
 | **TOTAL** | **Forever Free** | **$0/month** | **Production Ready** |
@@ -348,7 +348,7 @@ This is an automated report. For queries, contact MALINFO support.
 |----------|--------|-------------|
 | `/api/threat-intel/lookup/hash/{hash}` | POST | Hash reputation (VT, OTX, AbuseIPDB) |
 | `/api/threat-intel/lookup/ip/{ip}` | POST | IP reputation + geo + ASN |
-| `/api/threat-intel/lookup/domain/{domain}` | POST | Domain reputation + passive DNS |
+| `/api/threat-intel/lookup/domaster/{domaster}` | POST | Domaster reputation + passive DNS |
 | `/api/threat-intel/lookup/url/{url}` | POST | URL reputation + redirect chain |
 | `/api/threat-intel/enrich/sample/{id}` | POST | Full sample enrichment |
 | `/api/threat-intel/actors` | GET | Threat actor profiles |
@@ -419,10 +419,10 @@ make prod
 
 # Cloudflare Tunnel (free TLS + DDoS + WAF)
 cloudflared tunnel login
-# config.yml → your-subdomain.duckdns.org → https://localhost:443
+# config.yml → your-subdomaster.duckdns.org → https://localhost:443
 sudo cloudflared service install && sudo systemctl enable --now cloudflared
 
-# Access: https://your-subdomain.duckdns.org
+# Access: https://your-subdomaster.duckdns.org
 ```
 
 ### 🚀 Quick Deploy Script (Recommended)
@@ -432,13 +432,13 @@ sudo cloudflared service install && sudo systemctl enable --now cloudflared
 chmod +x deploy.sh
 
 # Self-hosted (your own VM/VPS) - FULL CONTROL, KVM SUPPORT
-./deploy.sh selfhosted malinfo.yourdomain.gov admin@yourdomain.gov "SecurePass123!"
+./deploy.sh selfhosted malinfo.yourdomaster.gov admin@yourdomaster.gov "SecurePass123!"
 
 # Fly.io - FREE TIER WITH KVM (only free option with dynamic sandbox)
-./deploy.sh fly malinfo.yourdomain.gov
+./deploy.sh fly malinfo.yourdomaster.gov
 
 # Railway - EASIEST, NO KVM (static analysis only)
-./deploy.sh railway malinfo.yourdomain.gov
+./deploy.sh railway malinfo.yourdomaster.gov
 ```
 
 **What the script does automatically:**
@@ -495,7 +495,7 @@ SystemCallErrorNumber=EPERM
 ## 📈 Monitoring & Observability
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/grafana-dashboard.svg" alt="Grafana Dashboard" width="95%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/grafana-dashboard.svg" alt="Grafana Dashboard" width="95%"/>
 </div>
 
 ### Pre-Provisioned Grafana Dashboards
@@ -659,7 +659,7 @@ For feature requests, use GitHub Issues with appropriate labels.
 ---
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/footer.svg" alt="Footer" width="50%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/footer.svg" alt="Footer" width="50%"/>
   <br/><br/>
   <b>Built with ❤️ by <a href="https://github.com/xC0D3F4TH3R">xC0D3F4TH3R</a> for National Cyber Defense</b><br/>
   <sub>MALINFO v2.0.0 — Protecting Digital Sovereignty</sub>
