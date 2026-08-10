@@ -118,7 +118,7 @@ async def submit_report_details(payload: CitizenReportIn, db: AsyncSession = Dep
         "app": "medium",
     }
     severity = severity_map.get(payload.report_type, "medium")
-    
+
     # Extract IOCs from submitted value
     iocs = []
     if payload.submitted_value:
@@ -152,7 +152,7 @@ async def submit_report_details(payload: CitizenReportIn, db: AsyncSession = Dep
         submitted_value=payload.submitted_value,
         iocs=iocs,
     )
-    
+
     # Log notification result for audit
     if notify_result.get("error"):
         logger.warning(f"Agency notification failed for report {report.id}: {notify_result.get('reason')}")
@@ -175,16 +175,16 @@ async def submit_report_with_file(
     """Report a suspected malicious file — automatically triggers the full analysis pipeline."""
     # Comprehensive file validation
     is_valid, error, file_info = await validate_upload_file(file, settings.UPLOAD_DIR)
-    
+
     if not is_valid:
         raise HTTPException(status_code=400, detail=error)
-    
+
     # Get safe destination path
     try:
         dest = get_safe_destination_path(settings.UPLOAD_DIR, file_info["safe_filename"])
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
     # Move validated file from temp to final location
     temp_path = Path(file_info["temp_path"])
     try:
@@ -193,7 +193,7 @@ async def submit_report_with_file(
         # Cleanup temp file on error
         if temp_path.exists():
             temp_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}") from e
 
     # Calculate file hashes
     sha256_hash = hashlib.sha256()
@@ -206,7 +206,7 @@ async def submit_report_with_file(
             md5_hash.update(chunk)
 
     sample_id = str(uuid.uuid4())
-    
+
     sample = Sample(
         id=sample_id,
         original_filename=file.filename or "unknown",

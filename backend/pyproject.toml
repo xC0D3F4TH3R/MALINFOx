@@ -83,6 +83,7 @@ module = [
     "pefile", "pyelftools.*", "macholib.*", "magic", "yara",
     "androguard.*", "scapy.*", "olefile", "olevba", "fitz",
     "esprima", "ssdeep", "watchdog.*", "clr", "Evtx", "Evtx.Evtx",
+    "numpy", "numpy.*",
 ]
 ignore_missing_imports = true
 

@@ -64,12 +64,12 @@ class ICAPProtocolError(Exception):
 class ICAPServer:
     """
     Async ICAP server for malware inspection integration with network gateways.
-    
+
     Typical deployment:
     - Squid proxy: icap_service service_req reqmod_precache bypass=off icap://malinfo:1344/reqmod
     - Squid proxy: icap_service service_resp respmod_precache bypass=off icap://malinfo:1344/respmod
     - Email gateway: Configure ICAP client to forward attachments
-    
+
     The gateway MUST be on infrastructure the deploying authority controls.
     """
 
@@ -135,8 +135,8 @@ class ICAPServer:
 
         try:
             method, uri, version = line.decode().strip().split(" ", 2)
-        except ValueError:
-            raise ICAPProtocolError("Invalid request line")
+        except ValueError as e:
+            raise ICAPProtocolError("Invalid request line") from e
 
         if method not in ICAP_METHODS:
             raise ICAPProtocolError(f"Unsupported method: {method}")

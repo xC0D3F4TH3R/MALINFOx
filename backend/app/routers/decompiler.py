@@ -117,7 +117,7 @@ class BuiltinEngine(DecompilerEngine):
             )
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout or self.timeout)
             return proc.returncode, stdout.decode(errors='replace'), stderr.decode(errors='replace')
-        except TimeoutError:
+        except TimeoutError as e:
             return -1, "", f"Command timed out after {timeout or self.timeout}s"
         except Exception as e:
             return -1, "", str(e)
@@ -417,9 +417,9 @@ class GhidraEngine(DecompilerEngine):
             )
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=self.ghidra_timeout)
             return proc.returncode, stdout.decode(), stderr.decode()
-        except TimeoutError:
+        except TimeoutError as e:
             return -1, "", "Ghidra analysis timed out"
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             return -1, "", f"Ghidra not found at {self.ghidra_path}. Please install Ghidra and set GHIDRA_PATH in config."
         except Exception as e:
             return -1, "", str(e)
@@ -505,12 +505,12 @@ class RetdecEngine(DecompilerEngine):
                     "decompiled": decompiled,
                     "functions": self._parse_functions(decompiled)
                 }
-            except TimeoutError:
-                raise Exception("Retdec analysis timed out")
-            except FileNotFoundError:
-                raise Exception(f"Retdec not found at {self.retdec_path}. Please install retdec and set RETDEC_PATH in config.")
+            except TimeoutError as e:
+                raise Exception("Retdec analysis timed out") from e
+            except FileNotFoundError as e:
+                raise Exception(f"Retdec not found at {self.retdec_path}. Please install retdec and set RETDEC_PATH in config.") from e
             except Exception as e:
-                raise Exception(f"Retdec error: {e!s}")
+                raise Exception(f"Retdec error: {e!s}") from e
 
     async def decompile_function(self, file_path: Path, address: str, options: dict) -> dict:
         result = await self.analyze(file_path, options)
@@ -526,163 +526,13 @@ class RetdecEngine(DecompilerEngine):
         return result.get("functions", [])
 
     def _parse_functions(self, decompiled: str) -> list[dict]:
+        """Extract function names from decompiled C code"""
         functions = []
-        for match in re.finditer(r'(\w+\s+\w+)\s*\([^)]*\)\s*\{', decompiled):
+        import re
+        for match in re.finditer(r'^(?:static\s+)?(?:inline\s+)?\w+\s+\**(\w+)\s*\([^)]*\)\s*{', decompiled, re.MULTILINE):
             functions.append({
-                "signature": match.group(1),
-                "name": match.group(1).split()[-1] if match.group(1) else "unknown"
+                "name": match.group(1),
+                "address": "unknown",
+                "signature": match.group(0).split('{')[0].strip(),
             })
         return functions
-
-
-# Get engine instance
-def get_engine(engine_name: str) -> DecompilerEngine:
-    if engine_name == "ghidra":
-        return GhidraEngine()
-    elif engine_name == "retdec":
-        return RetdecEngine()
-    elif engine_name == "builtin":
-        return BuiltinEngine()
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown engine: {engine_name}")
-
-
-# ── API Endpoints ──
-
-@router.post("/analyze", response_model=DecompilerTaskResponse, status_code=status.HTTP_202_ACCEPTED)
-async def start_decompilation(
-    task_data: DecompilerTaskCreate,
-    background_tasks: BackgroundTasks,
-    current_user: User = Depends(require_analyst),
-):
-    """Start decompilation task for a sample"""
-
-    # Verify sample exists
-    from sqlalchemy import select
-
-    from app.database import AsyncSessionLocal
-    from app.models import Sample
-
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Sample).where(Sample.id == task_data.sample_id))
-        sample = result.scalar_one_or_none()
-        if not sample:
-            raise HTTPException(status_code=404, detail="Sample not found")
-
-        file_path = Path(sample.stored_path)
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail="Sample file not found")
-
-    # Create task
-    task_id = str(uuid.uuid4())
-    task = {
-        "task_id": task_id,
-        "status": "pending",
-        "engine": task_data.engine,
-        "sample_id": task_data.sample_id,
-        "file_path": str(file_path),
-        "options": task_data.options,
-        "created_at": __import__('datetime').datetime.utcnow().isoformat() + "Z",
-        "started_at": None,
-        "completed_at": None,
-        "error": None,
-        "result": None,
-    }
-    _decompiler_tasks[task_id] = task
-
-    # Run in background
-    background_tasks.add_task(run_decompilation_task, task_id)
-
-    return DecompilerTaskResponse(**task)
-
-
-@router.get("/tasks", response_model=list[DecompilerTaskResponse])
-async def list_tasks(
-    status_filter: str | None = None,
-    current_user: User = Depends(require_analyst),
-):
-    """List decompilation tasks"""
-    tasks = list(_decompiler_tasks.values())
-    if status_filter:
-        tasks = [t for t in tasks if t["status"] == status_filter]
-    return [DecompilerTaskResponse(**t) for t in tasks]
-
-
-@router.get("/tasks/{task_id}", response_model=DecompilerTaskResponse)
-async def get_task(task_id: str, current_user: User = Depends(require_analyst)):
-    """Get decompilation task status"""
-    task = _decompiler_tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return DecompilerTaskResponse(**task)
-
-
-@router.get("/tasks/{task_id}/result")
-async def get_task_result(task_id: str, current_user: User = Depends(require_analyst)):
-    """Get decompilation result"""
-    task = _decompiler_tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] != "completed":
-        raise HTTPException(status_code=400, detail=f"Task not completed (status: {task['status']})")
-    return task.get("result", {})
-
-
-@router.get("/tasks/{task_id}/functions", response_model=list[DecompilerFunction])
-async def get_functions(task_id: str, current_user: User = Depends(require_analyst)):
-    """Get decompiled functions"""
-    task = _decompiler_tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] != "completed":
-        raise HTTPException(status_code=400, detail=f"Task not completed (status: {task['status']})")
-
-    result = task.get("result", {})
-    functions = result.get("functions", [])
-    return [DecompilerFunction(**f) for f in functions]
-
-
-@router.get("/tasks/{task_id}/decompile/{address}")
-async def decompile_function(
-    task_id: str,
-    address: str,
-    current_user: User = Depends(require_analyst),
-):
-    """Decompile specific function by address"""
-    task = _decompiler_tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    engine = get_engine(task["engine"])
-    file_path = Path(task["file_path"])
-
-    result = await engine.decompile_function(file_path, address, task["options"])
-    return result
-
-
-# ── Background Task ──
-
-async def run_decompilation_task(task_id: str):
-    """Run decompilation in background"""
-    task = _decompiler_tasks[task_id]
-    task["status"] = "running"
-    task["started_at"] = __import__('datetime').datetime.utcnow().isoformat() + "Z"
-
-    try:
-        engine = get_engine(task["engine"])
-        file_path = Path(task["file_path"])
-
-        logger.info(f"Starting decompilation task {task_id} with {task['engine']}")
-        result = await engine.analyze(file_path, task["options"])
-
-        task["status"] = "completed"
-        task["result"] = result
-        logger.info(f"Decompilation task {task_id} completed")
-
-    except Exception as e:
-        task["status"] = "failed"
-        task["error"] = str(e)
-        logger.exception(f"Decompilation task {task_id} failed: {e}")
-
-    finally:
-        task["completed_at"] = __import__('datetime').datetime.utcnow().isoformat() + "Z"

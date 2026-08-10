@@ -37,16 +37,16 @@ async def upload_file(
 ):
     # Comprehensive file validation
     is_valid, error, file_info = await validate_upload_file(file, settings.UPLOAD_DIR)
-    
+
     if not is_valid:
         raise HTTPException(status_code=400, detail=error)
-    
+
     # Get safe destination path
     try:
         dest = get_safe_destination_path(settings.UPLOAD_DIR, file_info["safe_filename"])
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
     # Move validated file from temp to final location
     temp_path = Path(file_info["temp_path"])
     try:
@@ -55,10 +55,10 @@ async def upload_file(
         # Cleanup temp file on error
         if temp_path.exists():
             temp_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
-    
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}") from e
+
     sample_id = str(uuid.uuid4())
-    
+
     sample = Sample(
         id=sample_id,
         original_filename=file.filename or "unknown",
