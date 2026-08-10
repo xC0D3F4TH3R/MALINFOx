@@ -7,37 +7,64 @@ on:
     branches: [main, develop]
   schedule:
     - cron: '0 2 * * *'
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  PYTHON_VERSION: '3.11'
+  # Cache key for Python dependencies
+  PYTHON_DEPS_CACHE_KEY: python-deps-${{ runner.os }}-${{ hashFiles('backend/requirements.txt', 'backend/pyproject.toml') }}
 
 jobs:
-  # Security scanning job - non-blocking, upload artifacts only
+  # Security scanning job - blocks on high/critical findings
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      security-events: write
+    outputs:
+      has-critical: ${{ steps.bandit.outputs.has-critical || steps.safety.outputs.has-critical || steps.pip-audit.outputs.has-critical || steps.semgrep.outputs.has-critical }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for semgrep to analyze history
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/pyproject.toml
+
+      - name: Install system dependencies for security tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+            libmagic1 libfuzzy2 libssl3 yara libxml2 \
+            && rm -rf /var/lib/apt/lists/*
 
       - name: Install security tools
         run: |
           pip install --upgrade pip
-          pip install bandit[toml] safety pip-audit
+          pip install "bandit[toml]>=1.7.5" "safety>=2.3.0" "pip-audit>=2.7.0"
 
       - name: Run Bandit (Python static analysis)
+        id: bandit
         run: |
-          bandit -r backend/app -f json -o bandit-report.json || true
-          bandit -r backend/app -f txt
-        continue-on-error: true
+          bandit -r backend/app -f json -o bandit-report.json -lll --severity-level high || true
+          bandit -r backend/app -f txt -lll --severity-level high
+          # Check for critical/high findings
+          CRITICAL_COUNT=$(jq '[.results[] | select(.severity == "HIGH" or .severity == "MEDIUM")] | length' bandit-report.json 2>/dev/null || echo 0)
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "has-critical=true" >> $GITHUB_OUTPUT
+            echo "::error::Bandit found $CRITICAL_COUNT high/medium severity issues"
+          else
+            echo "has-critical=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Bandit report as artifact
         uses: actions/upload-artifact@v4
@@ -45,13 +72,21 @@ jobs:
         with:
           name: bandit-report
           path: bandit-report.json
-          retention-days: 7
+          retention-days: 30
 
       - name: Run Safety (Dependency vulnerability check)
+        id: safety
         run: |
           safety check --json --output safety-report.json || true
           safety check --full-report
-        continue-on-error: true
+          # Check for vulnerabilities
+          VULN_COUNT=$(jq '.vulnerabilities | length' safety-report.json 2>/dev/null || echo 0)
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "has-critical=true" >> $GITHUB_OUTPUT
+            echo "::error::Safety found $VULN_COUNT vulnerable dependencies"
+          else
+            echo "has-critical=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Safety report as artifact
         uses: actions/upload-artifact@v4
@@ -59,13 +94,21 @@ jobs:
         with:
           name: safety-report
           path: safety-report.json
-          retention-days: 7
+          retention-days: 30
 
       - name: Run pip-audit (Additional dependency check)
+        id: pip-audit
         run: |
-          pip-audit --format=json --output=pip-audit-report.json || true
-          pip-audit
-        continue-on-error: true
+          pip-audit --format=json --output=pip-audit-report.json --desc=on || true
+          pip-audit --desc=on
+          # Check for vulnerabilities
+          VULN_COUNT=$(jq '[.vulnerabilities[] | select(.fix_versions != [])] | length' pip-audit-report.json 2>/dev/null || echo 0)
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "has-critical=true" >> $GITHUB_OUTPUT
+            echo "::error::pip-audit found $VULN_COUNT fixable vulnerabilities"
+          else
+            echo "has-critical=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload pip-audit report as artifact
         uses: actions/upload-artifact@v4
@@ -73,13 +116,19 @@ jobs:
         with:
           name: pip-audit-report
           path: pip-audit-report.json
-          retention-days: 7
+          retention-days: 30
 
       - name: Run Semgrep (SAST)
+        id: semgrep
         uses: returntocorp/semgrep-action@v1
         with:
-          config: auto
+          config: >
+            p/security-audit
+            p/secrets
+            p/ci
+            p/python
           generateSarif: true
+          sarifOutput: semgrep-report.sarif
         continue-on-error: true
 
       - name: Upload Semgrep SARIF to Code Scanning
@@ -89,50 +138,15 @@ jobs:
           sarif_file: semgrep-report.sarif
           category: semgrep
 
-  # Code quality job - lint, type check, tests
+      - name: Fail on critical security findings
+        if: steps.bandit.outputs.has-critical == 'true' || steps.safety.outputs.has-critical == 'true' || steps.pip-audit.outputs.has-critical == 'true'
+        run: |
+          echo "::error::Critical security findings detected. Failing build."
+          exit 1
+
+  # Code quality job - lint, type check, tests (blocks on failures)
   code-quality:
     name: Code Quality
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install ruff mypy pytest pytest-cov
-
-      - name: Run Ruff (Linting) - security files only
-        run: |
-          ruff check backend/app/security_middleware.py backend/app/auth/password_security.py backend/app/security_upload.py backend/app/auth/rbac.py backend/app/routers/auth.py backend/app/main.py --output-format=github
-        continue-on-error: true
-
-      - name: Run MyPy (Type checking) - security files only
-        run: |
-          mypy backend/app/security_middleware.py backend/app/auth/password_security.py backend/app/security_upload.py backend/app/auth/rbac.py backend/app/routers/auth.py backend/app/main.py --ignore-missing-imports --no-error-summary || true
-        continue-on-error: true
-
-      - name: Run tests with coverage
-        run: |
-          cd backend && pytest --cov=app --cov-report=xml --cov-report=term-missing
-        continue-on-error: true
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./backend/coverage.xml
-          fail_ci_if_error: false
-
-  # Docker security scan
-  docker-security:
-    name: Docker Security Scan
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -140,18 +154,77 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build backend image
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/pyproject.toml
+
+      - name: Install system dependencies
         run: |
-          docker build --no-cache -t malinfo-backend:test backend/
-        continue-on-error: true
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+            libmagic1 libfuzzy2 libssl3 yara libxml2 libpq-dev \
+            && rm -rf /var/lib/apt/lists/*
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install ruff mypy pytest pytest-cov pytest-asyncio httpx
+
+      - name: Run Ruff (Linting) - all Python files
+        run: |
+          ruff check backend/app --output-format=github
+
+      - name: Run Ruff (Format check)
+        run: |
+          ruff format --check backend/app
+
+      - name: Run MyPy (Type checking) - all Python files
+        run: |
+          mypy backend/app --ignore-missing-imports --no-error-summary
+
+      - name: Run tests with coverage
+        run: |
+          cd backend && pytest --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing -v
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.xml
+          fail_ci_if_error: true
+          flags: backend
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # Docker security scan
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (using production Dockerfile)
+        run: |
+          docker build --no-cache -t malinfo-backend:test -f backend/Dockerfile.prod backend/
 
       - name: Run Trivy (Container vulnerability scan)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: malinfo-backend:test
           format: 'sarif'
           output: 'trivy-report.sarif'
           severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
         continue-on-error: true
 
       - name: Upload Trivy SARIF to Code Scanning
@@ -161,104 +234,136 @@ jobs:
           sarif_file: trivy-report.sarif
           category: trivy
 
-      - name: Run Hadolint (Dockerfile linting)
+      - name: Run Hadolint (Dockerfile linting) - all Dockerfiles
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: backend/Dockerfile
-        continue-on-error: true
+          failure-threshold: error
 
       - name: Run Hadolint (Dockerfile.prod)
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: backend/Dockerfile.prod
-        continue-on-error: true
+          failure-threshold: error
 
       - name: Run Hadolint (Dockerfile.icap)
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: backend/Dockerfile.icap
-        continue-on-error: true
+          failure-threshold: error
 
       - name: Run Hadolint (Dockerfile.monitor)
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: backend/Dockerfile.monitor
-        continue-on-error: true
+          failure-threshold: error
 
-  # Build and push
-    build:
-      name: Build and Push
-      needs: [security-scan, code-quality, docker-security]
-      runs-on: ubuntu-latest
-      continue-on-error: true
-      timeout-minutes: 60
-      permissions:
-        contents: read
-        packages: write
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+  # Build and push (only runs if security-scan and code-quality pass)
+  build:
+    name: Build and Push
+    needs: [security-scan, code-quality, docker-security]
+    if: ${{ needs.security-scan.outputs.has-critical != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Set up Docker Buildx
-          uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-        - name: Log in to Container Registry
-          uses: docker/login-action@v3
-          with:
-            registry: ${{ env.REGISTRY }}
-            username: ${{ github.actor }}
-            password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Extract metadata
-          id: meta
-          uses: docker/metadata-action@v5
-          with:
-            images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
-            tags: |
-              type=ref,event=branch
-              type=ref,event=pr
-              type=sha,prefix={{branch}}-
-              type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=MALINFO Backend
+            org.opencontainers.image.description=National malware analysis & C2 intelligence platform
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=MIT
 
-        - name: Build and push backend
-          uses: docker/build-push-action@v5
-          with:
-            context: ./backend
-            file: ./backend/Dockerfile.prod
-            push: true
-            tags: ${{ steps.meta.outputs.tags }}
-            labels: ${{ steps.meta.outputs.labels }}
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
-            build-args: |
-              BUILD_DATE=${{ github.event.head_commit.timestamp }}
-              CACHE_BUST=${{ github.run_id }}
-            no-cache: true
+      - name: Build and push backend
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            CACHE_BUST=${{ github.run_id }}
+          provenance: true
+          sbom: true
+
+      - name: Output image digest
+        run: |
+          echo "Image digest: ${{ steps.build.outputs.digest }}"
+          echo "Image tags: ${{ steps.meta.outputs.tags }}"
 
   # Deploy to staging
-    deploy-staging:
-      name: Deploy to Staging
-      needs: build
-      runs-on: ubuntu-latest
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      continue-on-error: true
-      environment: staging
-      steps:
-        - name: Deploy to staging
-          run: |
-            echo "Deploy to staging environment"
-            # Add your staging deployment commands here
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Deploy to production
-    deploy-production:
-      name: Deploy to Production
-      needs: deploy-staging
-      runs-on: ubuntu-latest
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      continue-on-error: true
-      environment: production
-      steps:
-        - name: Deploy to production
-          run: |
-            echo "Deploy to production environment"
-            # Add your production deployment commands here
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Image digest: ${{ needs.build.outputs.digest }}"
+          # Add your staging deployment commands here
+          # Example: kubectl set image deployment/malinfo-backend malinfo-backend=${{ needs.build.outputs.digest }} -n staging
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    needs: deploy-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          echo "Image digest: ${{ needs.build.outputs.digest }}"
+          # Add your production deployment commands here
+          # Example: kubectl set image deployment/malinfo-backend malinfo-backend=${{ needs.build.outputs.digest }} -n production
