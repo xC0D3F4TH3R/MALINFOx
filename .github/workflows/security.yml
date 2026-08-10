@@ -2,9 +2,9 @@ name: MALINFO Security CI/CD
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, develop]
   pull_request:
-    branches: [main, master, develop]
+    branches: [main, develop]
   schedule:
     - cron: '0 2 * * *'
 
@@ -236,29 +236,29 @@ jobs:
             no-cache: true
 
   # Deploy to staging
-  deploy-staging:
-    name: Deploy to Staging
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    continue-on-error: true
-    environment: staging
-    steps:
-      - name: Deploy to staging
-        run: |
-          echo "Deploy to staging environment"
-          # Add your staging deployment commands here
+    deploy-staging:
+      name: Deploy to Staging
+      needs: build
+      runs-on: ubuntu-latest
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      continue-on-error: true
+      environment: staging
+      steps:
+        - name: Deploy to staging
+          run: |
+            echo "Deploy to staging environment"
+            # Add your staging deployment commands here
 
-  # Deploy to production
-  deploy-production:
-    name: Deploy to Production
-    needs: deploy-staging
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    continue-on-error: true
-    environment: production
-    steps:
-      - name: Deploy to production
-        run: |
-          echo "Deploy to production environment"
-          # Add your production deployment commands here
+    # Deploy to production
+    deploy-production:
+      name: Deploy to Production
+      needs: deploy-staging
+      runs-on: ubuntu-latest
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      continue-on-error: true
+      environment: production
+      steps:
+        - name: Deploy to production
+          run: |
+            echo "Deploy to production environment"
+            # Add your production deployment commands here
