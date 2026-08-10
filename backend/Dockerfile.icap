@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Ensure pkg-config can find libvirt
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 

@@ -39,7 +39,7 @@ dependencies = [
     "tenacity==9.0.0",
     "email-validator==2.1.0",
     "prometheus-client==0.19.0",
-    "libvirt-python==10.6.0",
+    "libvirt-python==9.13.0",      # libvirt bindings for QEMU/KVM VM management - compatible with libvirt 9.x
     "cryptography==42.0.5",
     "pyinotify==0.9.6",
 ]

@@ -6,6 +6,8 @@
 FROM python:3.11-slim as builder
 
 # Install build dependencies
+# Note: libvirt-python 10.6.0 requires libvirt C library >= 10.0.0
+# Use libvirt-dev from debian bookworm (libvirt 9.x) - need to ensure compatibility
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \
@@ -18,6 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libyara-dev \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure pkg-config can find libvirt
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
 
 # Set working directory
 WORKDIR /app
