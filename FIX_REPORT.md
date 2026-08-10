@@ -1,7 +1,7 @@
 # MALINFO CI/CD Fix Report
 
 ## Summary
-Fixed critical CI/CD pipeline failures and security configuration issues. All changes pushed to `master` branch.
+Fixed critical CI/CD pipeline failures and security configuration issues. All changes pushed to `main` branch.
 
 ---
 
