@@ -38,11 +38,11 @@ from app.config import settings
 from app.database import get_db
 from app.models import CitizenReport, Sample
 from app.routers.upload import _run_pipeline
+from app.schemas import CitizenReportIn, CitizenReportOut
 from app.security_upload import (
     get_safe_destination_path,
     validate_upload_file,
 )
-from app.schemas import CitizenReportIn, CitizenReportOut
 from app.services.agency_notification import (
     AgencyContact,
     AgencyNotificationService,

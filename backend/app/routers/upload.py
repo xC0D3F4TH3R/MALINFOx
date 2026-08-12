@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import shutil
+import time
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,7 +18,7 @@ from app.reporting.report_generator import (
     render_html_report,
     save_report,
 )
-from app.sandbox.orchestrator import detonate_sample
+from app.sandbox.vm_orchestrator import get_orchestrator
 from app.schemas import UploadResponse
 from app.security_upload import (
     get_safe_destination_path,
@@ -117,11 +119,65 @@ async def _run_pipeline(sample_id: str, file_path: Path) -> None:
         await db.commit()
 
         sandbox_report = None
-        if settings.SANDBOX_ENABLED:
+        if settings.VM_ORCHESTRATOR_ENABLED:
             sample.status = AnalysisStatus.SANDBOX_RUNNING
             await db.commit()
-            sandbox_report = await detonate_sample(file_path, sample.target_os)
-            sample.sandbox_report = sandbox_report
+            
+            # Find appropriate template for the target OS
+            orchestrator = get_orchestrator()
+            templates = await orchestrator.list_templates()
+            matching_template = None
+            for t in templates:
+                if t.os_type == sample.target_os and t.state.value == "ready":
+                    matching_template = t
+                    break
+            
+            if matching_template:
+                # Submit for dynamic analysis
+                task = await orchestrator.submit_analysis(
+                    sample_id=sample.id,
+                    sample_path=file_path,
+                    template_id=matching_template.id,
+                    timeout=settings.SANDBOX_TIMEOUT_SEC,
+                    options={
+                        "capture_screenshots": True,
+                        "capture_memory": True,
+                        "capture_network": True,
+                        "api_monitor_enabled": True,
+                    }
+                )
+                
+                # Wait for completion (poll)
+                max_wait = settings.SANDBOX_TIMEOUT_SEC
+                start = time.time()
+                while time.time() - start < max_wait:
+                    await asyncio.sleep(5)
+                    task = await orchestrator.get_task(task.id)
+                    if task and task.state.value in ("completed", "failed"):
+                        break
+                
+                # Build sandbox report from task
+                if task and task.state.value == "completed":
+                    sandbox_report = {
+                        "available": True,
+                        "task_id": task.id,
+                        "malscore": task.malscore,
+                        "signatures": [{"description": s} for s in task.signatures] if hasattr(task, 'signatures') else [],
+                        "dropped_files": [{"name": f.get("path", "").split("\\")[-1]} for f in task.dropped_files] if task.dropped_files else [],
+                        "network_summary": {"events": len(task.network_events)} if task.network_events else {},
+                        "pcap_path": None,  # Would be stored with results
+                        "screenshots_available": len(task.screenshots) > 0,
+                        "process_tree": task.process_tree,
+                        "api_calls": task.api_calls,
+                        "file_events": task.file_events,
+                        "registry_events": task.registry_events,
+                        "mitre_techniques": task.mitre_techniques,
+                    }
+                    sample.sandbox_report = sandbox_report
+            else:
+                sandbox_report = {"available": False, "reason": f"No ready template for OS: {sample.target_os}"}
+                sample.sandbox_report = sandbox_report
+            
             await db.commit()
 
         network_report = None
@@ -147,3 +203,38 @@ async def _run_pipeline(sample_id: str, file_path: Path) -> None:
 
         sample.status = AnalysisStatus.COMPLETE
         await db.commit()
+
+        # Send agency notification if malicious
+        if sample.verdict in (Verdict.MALICIOUS, Verdict.SUSPICIOUS):
+            from app.services.agency_notification import get_notification_service
+            notification_service = get_notification_service()
+            notification_service.notify_agencies(
+                report_id=sample.id,
+                reference_code=f"MALINFO-{sample.id[:8].upper()}",
+                incident_type="file",
+                severity="critical" if sample.verdict == Verdict.MALICIOUS else "high",
+                title=f"Malicious File Detected: {sample.original_filename}",
+                description=f"MALINFO analysis of {sample.original_filename} ({sample.file_type}) resulted in {sample.verdict.value} verdict with risk score {sample.risk_score}/100.",
+                submitted_by="MALINFO Automated Analysis",
+                submitted_contact=None,
+                submitted_value=sample.sha256,
+                iocs=static_report.get("iocs", []),
+                analysis_summary=full_report.get("executive_summary"),
+                risk_score=int(sample.risk_score),
+                verdict=sample.verdict.value,
+                mitre_techniques=sandbox_report.get("mitre_techniques", []) if sandbox_report else [],
+                sample_id=sample.id,
+                file_info={
+                    "filename": sample.original_filename,
+                    "size": sample.file_size,
+                    "sha256": sample.sha256,
+                    "md5": sample.md5,
+                    "sha1": sample.sha1,
+                    "type": sample.file_type,
+                    "target_os": sample.target_os,
+                },
+                network_info={
+                    "connections": sandbox_report.get("network_summary", {}) if sandbox_report else {}
+                },
+                recommended_actions=full_report.get("recommendations", []),
+            )

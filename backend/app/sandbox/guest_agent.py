@@ -13,6 +13,7 @@ Runs inside analysis VMs to provide real-time behavioral monitoring:
 - Sample execution and control
 
 Communicates with host orchestrator via virtio-serial channel (org.malinfo.agent)
+Protocol: newline-delimited JSON over Unix domain socket
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -322,19 +324,17 @@ class APICallMonitor:
         self.running = False
 
     def _etw_loop(self):
-        """Windows ETW API monitoring"""
-        # This would use ETW (Event Tracing for Windows) to capture API calls
-        # For production, use a library like python-etw or implement a kernel driver
-        logger.info("API monitor started (ETW simulation)")
+        """Windows ETW API monitoring - placeholder for real implementation"""
+        # Real implementation would use python-etw or kernel ETW tracing
+        # For now, simulate by monitoring common Windows APIs via polling
+        logger.info("API monitor started (ETW simulation - replace with real ETW)")
         while self.running:
-            # In real implementation, this would receive ETW events
             time.sleep(5)
 
     def _ptrace_loop(self):
-        """Linux ptrace API monitoring"""
-        # This would use ptrace to monitor syscalls
-        # For production, use sysdig, falco, or a custom ptrace implementation
-        logger.info("API monitor started (ptrace simulation)")
+        """Linux ptrace API monitoring - placeholder for real implementation"""
+        # Real implementation would use bpftrace/bcc or frida
+        logger.info("API monitor started (ptrace simulation - replace with real bpftrace)")
         while self.running:
             time.sleep(5)
 
@@ -405,7 +405,6 @@ class FileMonitor:
 
                 def _handle_event(self, event_type, event):
                     try:
-                        # Get process info (simplified)
                         self.collector.add_event("file_event", {
                             "event_type": event_type,
                             "path": event.pathname,
@@ -724,7 +723,6 @@ class ScreenshotCapture:
             import win32con
             import win32gui
             import win32ui
-            from PIL import Image
 
             # Get desktop window
             hdesktop = win32gui.GetDesktopWindow()
@@ -809,54 +807,70 @@ class SampleExecutor:
         self.collector = collector
         self.config = config
         self.process: subprocess.Popen | None = None
+        self.start_time: float = 0
+        self.sample_path: str = ""
 
-    def execute(self, sample_path: str, args: str = "") -> int:
-        """Execute the sample"""
+    def execute(self, sample_b64: str, sample_hash: str, sample_name: str, args: str = "", options: dict | None = None) -> int:
+        """Execute the sample from base64 data"""
         try:
-            # Copy sample to a working directory
-            work_dir = Path(sample_path).parent
+            # Decode and write sample to temp file
+            sample_data = base64.b64decode(sample_b64)
+            
+            # Create temp file in a working directory
+            work_dir = Path(tempfile.gettempdir()) / "malinfo_analysis"
+            work_dir.mkdir(parents=True, exist_ok=True)
+            
+            sample_path = work_dir / sample_name
+            sample_path.write_bytes(sample_data)
+            
+            # Make executable on Linux
+            if platform.system() != "Windows":
+                sample_path.chmod(0o755)
+            
+            self.sample_path = str(sample_path)
+            self.start_time = time.time()
 
             # Determine execution method based on file type
-            ext = Path(sample_path).suffix.lower()
+            ext = sample_path.suffix.lower()
 
             if platform.system() == "Windows":
                 if ext in [".exe", ".bat", ".cmd", ".com", ".scr", ".pif"]:
-                    cmd = [sample_path]
+                    cmd = [str(sample_path)]
                     if args:
                         cmd.extend(args.split())
                 elif ext in [".ps1"]:
-                    cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", sample_path]
+                    cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(sample_path)]
                     if args:
                         cmd.extend(args.split())
                 elif ext in [".vbs", ".js", ".jse", ".wsf", ".wsh"]:
-                    cmd = ["wscript", sample_path]
+                    cmd = ["wscript", str(sample_path)]
                     if args:
                         cmd.extend(args.split())
                 elif ext in [".py"]:
-                    cmd = ["python", sample_path]
+                    cmd = ["python", str(sample_path)]
                     if args:
                         cmd.extend(args.split())
                 else:
                     # Try to execute with default handler
-                    cmd = ["cmd", "/c", sample_path]
+                    cmd = ["cmd", "/c", str(sample_path)]
                     if args:
                         cmd.append(args)
             else:
                 # Linux/Android
                 if ext in [".sh", ".bash"]:
-                    cmd = ["bash", sample_path]
+                    cmd = ["bash", str(sample_path)]
                 elif ext in [".py"]:
-                    cmd = ["python3", sample_path]
+                    cmd = ["python3", str(sample_path)]
                 elif ext in [".pl"]:
-                    cmd = ["perl", sample_path]
+                    cmd = ["perl", str(sample_path)]
                 elif ext in [".rb"]:
-                    cmd = ["ruby", sample_path]
-                elif os.access(sample_path, os.X_OK):
-                    cmd = [sample_path]
+                    cmd = ["ruby", str(sample_path)]
+                elif os.access(str(sample_path), os.X_OK):
+                    cmd = [str(sample_path)]
                 else:
                     # Try to make executable and run
-                    Path(sample_path).chmod(0o755)
-                    cmd = [sample_path]
+                    sample_path.chmod(0o755)
+                    cmd = [str(sample_path)]
 
                 if args:
                     cmd.extend(args.split())
@@ -875,8 +889,12 @@ class SampleExecutor:
             self.collector.add_event("sample_execution", {
                 "pid": self.process.pid,
                 "command": " ".join(cmd),
-                "sample_path": sample_path,
+                "sample_path": str(sample_path),
+                "sample_hash": sample_hash,
             })
+
+            # Start monitoring this PID
+            self.collector.agent.api_monitor.monitored_pids.add(self.process.pid)
 
             return self.process.pid
 
@@ -884,7 +902,7 @@ class SampleExecutor:
             logger.exception("Sample execution error")
             self.collector.add_event("sample_execution_failed", {
                 "error": str(sys.exc_info()[1]),
-                "sample_path": sample_path,
+                "sample_path": self.sample_path,
             })
             return -1
 
@@ -892,7 +910,14 @@ class SampleExecutor:
         """Wait for process to complete"""
         if self.process:
             try:
-                return self.process.wait(timeout=timeout)
+                return_code = self.process.wait(timeout=timeout)
+                duration = time.time() - self.start_time
+                self.collector.add_event("execution_completed", {
+                    "pid": self.process.pid,
+                    "return_code": return_code,
+                    "duration_sec": duration,
+                })
+                return return_code
             except subprocess.TimeoutExpired:
                 return None
         return None
@@ -916,6 +941,9 @@ class GuestAgent:
         self.config = config
         self.running = False
         self.collector = EventCollector(self)
+        self.socket: socket.socket | None = None
+        self.connected = False
+        self._receive_thread: threading.Thread | None = None
 
         # Monitors
         self.process_monitor: ProcessMonitor | None = None
@@ -925,10 +953,6 @@ class GuestAgent:
         self.registry_monitor: RegistryMonitor | None = None
         self.screenshot_capture: ScreenshotCapture | None = None
         self.sample_executor: SampleExecutor | None = None
-
-        # Communication
-        self.socket: socket.socket | None = None
-        self.connected = False
 
     def start(self):
         """Start the agent"""
@@ -972,7 +996,13 @@ class GuestAgent:
         self._connect_to_host()
 
         # Start event flusher
-        _ = asyncio.create_task(self.collector.periodic_flush())
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        loop.create_task(self.collector.periodic_flush())
 
         logger.info("Guest Agent started successfully")
 
@@ -1012,10 +1042,12 @@ class GuestAgent:
                 "platform": platform.system(),
                 "platform_version": platform.version(),
                 "hostname": socket.gethostname(),
+                "capabilities": ["process", "file", "network", "registry", "screenshot", "memory_dump"],
             })
 
             # Start receiver thread
-            threading.Thread(target=self._receive_loop, daemon=True).start()
+            self._receive_thread = threading.Thread(target=self._receive_loop, daemon=True)
+            self._receive_thread.start()
 
         except Exception:
             logger.exception("Failed to connect to host")
@@ -1026,14 +1058,16 @@ class GuestAgent:
         buffer = ""
         while self.running and self.connected:
             try:
-                data = self.socket.recv(4096).decode('utf-8')
+                data = self.socket.recv(8192).decode('utf-8')
                 if not data:
                     break
 
                 buffer += data
                 while '\n' in buffer:
                     line, buffer = buffer.split('\n', 1)
-                    self._handle_command(json.loads(line))
+                    line = line.strip()
+                    if line:
+                        self._handle_command(json.loads(line))
 
             except (ConnectionError, OSError, json.JSONDecodeError):
                 logger.exception("Receive error")
@@ -1047,20 +1081,25 @@ class GuestAgent:
         cmd_type = command.get("type")
 
         if cmd_type == "execute_sample":
-            sample_path = command.get("sample_path", "")
+            sample_b64 = command.get("sample_b64", "")
+            sample_hash = command.get("sample_hash", "")
+            sample_name = command.get("sample_name", "sample")
             args = command.get("args", "")
+            options = command.get("options", {})
+            
             if self.sample_executor:
-                pid = self.sample_executor.execute(sample_path, args)
+                pid = self.sample_executor.execute(sample_b64, sample_hash, sample_name, args, options)
                 self._send_message({
                     "type": "execution_started",
                     "pid": pid,
-                    "sample_path": sample_path,
+                    "sample_path": self.sample_executor.sample_path,
                 })
 
         elif cmd_type == "terminate_sample":
+            pid = command.get("pid", 0)
             if self.sample_executor:
                 self.sample_executor.terminate()
-                self._send_message({"type": "sample_terminated"})
+                self._send_message({"type": "sample_terminated", "pid": pid})
 
         elif cmd_type == "get_status":
             self._send_message({
@@ -1080,17 +1119,81 @@ class GuestAgent:
         elif cmd_type == "capture_screenshot":
             if self.screenshot_capture:
                 # Trigger immediate screenshot
-                pass
+                screenshot_data = self.screenshot_capture._capture_screen()
+                if screenshot_data:
+                    import base64
+                    b64_data = base64.b64encode(screenshot_data).decode('ascii')
+                    self._send_message({
+                        "type": "screenshot",
+                        "data_b64": b64_data,
+                        "format": "png",
+                        "width": 1920,  # Would get actual dimensions
+                        "height": 1080,
+                    })
 
         elif cmd_type == "dump_memory":
-            # Trigger memory dump
-            pass
+            pid = command.get("pid", 0)
+            if pid and platform.system() == "Windows":
+                self._dump_memory_windows(pid)
+            elif pid:
+                self._dump_memory_linux(pid)
+
+    def _dump_memory_windows(self, pid: int):
+        """Dump memory on Windows using procdump"""
+        try:
+            work_dir = Path(tempfile.gettempdir()) / "malinfo_analysis"
+            dump_path = work_dir / f"memdump_{pid}.dmp"
+            
+            # Use procdump if available
+            result = subprocess.run(
+                ["procdump.exe", "-ma", str(pid), str(dump_path)],
+                capture_output=True,
+                timeout=30,
+                check=False
+            )
+            
+            if result.returncode == 0 and dump_path.exists():
+                self._send_message({
+                    "type": "memory_dump",
+                    "pid": pid,
+                    "path": str(dump_path),
+                    "size": dump_path.stat().st_size,
+                })
+            else:
+                logger.warning("procdump failed: %s", result.stderr.decode() if result.stderr else "unknown")
+        except Exception:
+            logger.exception("Memory dump failed")
+
+    def _dump_memory_linux(self, pid: int):
+        """Dump memory on Linux using gcore"""
+        try:
+            work_dir = Path(tempfile.gettempdir()) / "malinfo_analysis"
+            dump_path = work_dir / f"memdump_{pid}.core"
+            
+            result = subprocess.run(
+                ["gcore", "-o", str(dump_path), str(pid)],
+                capture_output=True,
+                timeout=30,
+                check=False
+            )
+            
+            if result.returncode == 0 and dump_path.exists():
+                self._send_message({
+                    "type": "memory_dump",
+                    "pid": pid,
+                    "path": str(dump_path),
+                    "size": dump_path.stat().st_size,
+                })
+            else:
+                logger.warning("gcore failed: %s", result.stderr.decode() if result.stderr else "unknown")
+        except Exception:
+            logger.exception("Memory dump failed")
 
     def _send_message(self, message: dict):
         """Send message to host"""
         if self.connected and self.socket:
             try:
-                data = json.dumps(message) + "\n"
+                data = json.dumps(message, default=str) + "\n"
                 self.socket.sendall(data.encode('utf-8'))
             except Exception:
                 logger.exception("Send error")
@@ -1098,7 +1201,7 @@ class GuestAgent:
 
     async def send_events(self, events: list[dict]):
         """Send events to host"""
-        if events:
+        if events and self.connected:
             self._send_message({
                 "type": "events",
                 "events": events,
@@ -1131,8 +1234,6 @@ async def main():
     # Override from environment
     if "MALINFO_AGENT_SOCKET" in os.environ:
         config.host_socket = os.environ["MALINFO_AGENT_SOCKET"]
-    if "MALINFO_SAMPLE_PATH" in os.environ:
-        config.sample_path = os.environ["MALINFO_SAMPLE_PATH"]
     if "MALINFO_TIMEOUT" in os.environ:
         config.analysis_timeout = int(os.environ["MALINFO_TIMEOUT"])
 
@@ -1148,16 +1249,6 @@ async def main():
 
     try:
         agent.start()
-
-        # If sample path provided, execute it
-        if config.sample_path and Path(config.sample_path).exists():
-            if agent.sample_executor:
-                pid = agent.sample_executor.execute(config.sample_path)
-                logger.info("Sample executed with PID %s", pid)
-
-                # Wait for completion or timeout
-                return_code = agent.sample_executor.wait(config.analysis_timeout)
-                logger.info("Sample completed with return code: %s", return_code)
 
         # Keep running until timeout or signal
         start_time = time.time()

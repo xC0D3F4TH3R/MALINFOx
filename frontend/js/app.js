@@ -16,6 +16,7 @@ import { UsersPage } from './pages/users.js';
 import { AuditPage } from './pages/audit.js';
 import { VMPage } from './pages/vm.js';
 import { ProfilePage } from './pages/profile.js';
+import { LiveAnalysisPage } from './pages/live-analysis.js';
 
 // Application State
 const App = {
@@ -39,6 +40,7 @@ const App = {
     audit: AuditPage,
     vm: VMPage,
     profile: ProfilePage,
+    'live-analysis': LiveAnalysisPage,
   },
 
   // Initialize application
@@ -91,7 +93,7 @@ const App = {
   // Update navigation based on user role
   updateNavigationForRole(role) {
     const adminOnly = ['users', 'audit', 'settings'];
-    const analystOnly = ['sandbox', 'monitoring', 'network', 'threat-intel', 'iocs', 'vm'];
+    const analystOnly = ['sandbox', 'monitoring', 'network', 'threat-intel', 'iocs', 'vm', 'live-analysis'];
     
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
       const page = item.dataset.page;
