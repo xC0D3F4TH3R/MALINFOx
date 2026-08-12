@@ -33,30 +33,30 @@
 <tr>
 <td width="33%" align="center" valign="top">
 
-### 🔬 **Complete Analysis Pipeline**
-- **Static**: PE/ELF/Mach-O/APK/OLE/Script analysis
-- **Dynamic**: Built-in VM orchestrator (libvirt/QEMU/KVM)
-- **Network**: PCAP, JA3/JA3S, DGA, C2 beaconing detection
-- **Threat Intel**: STIX/TAXII 2.1, MISP sync, ATT&CK mapping
+### 🔬 **Complete Analysis**
+- **Static**: PE/ELF/Mach-O/APK/OLE/Script
+- **Dynamic**: Built-in VM orchestrator (libvirt/QEMU)
+- **Network**: PCAP, JA3, DGA, C2, beaconing
+- **Threat Intel**: STIX/TAXII, MISP, ATT&CK
 
 </td>
 <td width="33%" align="center" valign="top">
 
-### 🏛️ **Government-Ready by Default**
-- Auto-notify **CERT-In, Cyber Crime Portal, State Cyber Cells**
-- Formal structured incident reports (government format)
-- RBAC + MFA + Tamper-evident audit logging
+### 🏛️ **Government-Ready**
+- Auto-notify **CERT-In, Cyber Crime Portal, State Cyber Cell**
+- Formal structured incident reports (Gov format)
+- RBAC + MFA + Audit logging (tamper-evident)
 - Air-gap deployment verified
-- FIPS 140-2 compatible cryptography
+- FIPS 140-2 ready
 
 </td>
 <td width="33%" align="center" valign="top">
 
-### 💰 **Zero-Cost Production Deployment**
-- Oracle Cloud Free Tier (4 ARM OCPU, 24GB RAM, 200GB)
-- DuckDNS + Cloudflare Tunnel = Free TLS/WAF/DDoS
-- Gmail SMTP for agency notifications
-- **$0/month forever** — production grade
+### 💰 **Zero Cost Production**
+- Oracle Cloud Free Tier (4 CPU, 24GB RAM, 200GB)
+- DuckDNS + Cloudflare Tunnel = Free TLS/WAF
+- Gmail SMTP for agency emails
+- **$0/month forever**
 
 </td>
 </tr>
@@ -64,7 +64,8 @@
 <td colspan="3" align="center">
 
 ### ⚡ **Real-Time Everything**
-WebSocket live analysis updates · Guest agent: process tree, API calls, files, registry, network · Screenshot capture, memory dump trigger · MITRE ATT&CK mapping in real-time
+- WebSocket live analysis updates · Guest agent: process tree, API calls, files, registry, network
+- Screenshot capture, memory dump trigger · MITRE ATT&CK mapping in real-time
 
 </td>
 </tr>
@@ -72,7 +73,7 @@ WebSocket live analysis updates · Guest agent: process tree, API calls, files, 
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture
 
 ```mermaid
 graph TB
@@ -93,7 +94,7 @@ graph TB
     ICAP --> DB
     MON --> DB
 
-    API --> SA[🔍 Static Analysis<br/>pefile, pyelftools, androguard, yara-python]
+    API --> SA[🔍 Static Analysis<br/>pefile, pyelftools, androguard, yara-python, ssdeep]
     API --> VM[☁️ VM Orchestrator<br/>libvirt/QEMU/KVM + virtio-serial]
     API --> NF[📡 Network Forensics<br/>scapy, JA3/JA3S, DGA, C2 parsing]
 
@@ -114,16 +115,52 @@ graph TB
 
 ---
 
-## 🎬 Platform Capabilities
+## 🎬 Live Demo
 
 <div align="center">
 
 | Dashboard | VM Sandbox | Agency Reports |
 |:---------:|:----------:|:--------------:|
-| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-dashboard.svg) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-vm-sandbox.svg) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/demo-agency-report.svg) |
-| *Real-time analyst dashboard* | *VM template → analysis → monitoring* | *Auto-formatted government reports* |
+| ![Dashboard](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/demo-dashboard.svg) | ![VM Sandbox](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/demo-vm-sandbox.svg) | ![Agency Report](https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/demo-agency-report.svg) |
+| *Real-time analyst dashboard* | *VM template → analysis → monitoring* | *Auto-formatted gov reports* |
 
 </div>
+
+> **Don't have the demo GIFs yet?** Place them in `/assets/` — see [Assets Required](#-assets-required) section below.
+
+---
+
+## 🚀 Quick Start (3 Minutes)
+
+```bash
+# 1️⃣ Clone & Initialize
+git clone https://github.com/xC0D3F4TH3R/MALINFOx.git
+cd MALINFOx
+make init
+
+# 2️⃣ Generate Secrets (⚠️ SAVE OUTPUT!)
+make secrets
+
+# 3️⃣ Configure Environment
+cp .env.example .env
+# Edit: ALLOWED_ORIGINS, SMTP, API keys, etc.
+
+# 4️⃣ Deploy (Oracle Cloud Free Tier recommended)
+make prod
+
+# 5️⃣ Verify Health
+make health
+```
+
+### 🆓 Free Production Deployment — **$0/Month Forever**
+
+| Component | Provider | Cost | Specs |
+|-----------|----------|------|-------|
+| **Compute + KVM** | Oracle Cloud Always Free | **$0** | 4 ARM OCPU, 24GB RAM, 200GB |
+| **Domaster** | DuckDNS (`malinfo.duckdns.org`) | **$0** | Free subdomaster + auto-renew |
+| **TLS + WAF** | Cloudflare Tunnel | **$0** | Auto-TLS, DDoS, Rate limiting |
+| **Email (Agencies)** | Gmail SMTP (App Password) | **$0** | 500/day free quota |
+| **TOTAL** | **Forever Free** | **$0/month** | **Production Ready** |
 
 ---
 
@@ -141,7 +178,7 @@ flowchart LR
     S --> I[🚀 Instance Launch<br/>Isolated Network (no internet)]
     I --> GA[🤖 Guest Agent<br/>virtio-serial channel]
     GA --> WS[🔄 WebSocket Stream<br/>Real-time Dashboard Updates]
-
+    
     GA --> PM[📊 Process Monitoring]
     GA --> API[🔌 API Interception]
     GA --> FS[📁 File System Events]
@@ -149,7 +186,7 @@ flowchart LR
     GA --> NW[🌐 Network Connections]
     GA --> SS[📸 Screenshot Capture]
     GA --> MD[💾 Memory Dump Trigger]
-
+    
     style ISO fill:#0d1117,stroke:#58a6ff,color:#fff
     style TB fill:#0d1117,stroke:#3fb950,color:#fff
     style S fill:#0d1117,stroke:#f0883e,color:#fff
@@ -196,7 +233,7 @@ flowchart LR
 | <img src="https://img.shields.io/badge/CERT--In-Critical-red?style=flat-square&logo=shield&logoColor=white"/> | **Critical** | `incident@cert-in.org.in` | Formal Gov |
 | <img src="https://img.shields.io/badge/Cyber%20Crime%20Portal-Critical-red?style=flat-square&logo=police&logoColor=white"/> | **Critical** | `cybercrime@gov.in` | Formal Gov |
 | <img src="https://img.shields.io/badge/State%20Cyber%20Cell-High-orange?style=flat-square&logo=gavel&logoColor=white"/> | **High** | `cybercell@police.gov.in` | Formal Gov |
-| <img src="https://img.shields.io/badge/MALINFO%20Central-High-ff6b35?style=flat-square&logo=database&logoColor=white"/> | **High** | `central@malinfo.gov.in` | Simple |
+| <img src="https://img.shields.io/badge/MALINFO%20Central-High-ff6b35?style=flat-square&logo=database&logoColor=white"/> | **High** | `ary4ntom4r@gmail.com` | Simple |
 
 </div>
 
@@ -311,7 +348,7 @@ This is an automated report. For queries, contact MALINFO support.
 |----------|--------|-------------|
 | `/api/threat-intel/lookup/hash/{hash}` | POST | Hash reputation (VT, OTX, AbuseIPDB) |
 | `/api/threat-intel/lookup/ip/{ip}` | POST | IP reputation + geo + ASN |
-| `/api/threat-intel/lookup/domain/{domain}` | POST | Domain reputation + passive DNS |
+| `/api/threat-intel/lookup/domaster/{domaster}` | POST | Domaster reputation + passive DNS |
 | `/api/threat-intel/lookup/url/{url}` | POST | URL reputation + redirect chain |
 | `/api/threat-intel/enrich/sample/{id}` | POST | Full sample enrichment |
 | `/api/threat-intel/actors` | GET | Threat actor profiles |
@@ -382,10 +419,10 @@ make prod
 
 # Cloudflare Tunnel (free TLS + DDoS + WAF)
 cloudflared tunnel login
-# config.yml → your-subdomain.duckdns.org → https://localhost:443
+# config.yml → your-subdomaster.duckdns.org → https://localhost:443
 sudo cloudflared service install && sudo systemctl enable --now cloudflared
 
-# Access: https://your-subdomain.duckdns.org
+# Access: https://your-subdomaster.duckdns.org
 ```
 
 ### 🚀 Quick Deploy Script (Recommended)
@@ -395,13 +432,13 @@ sudo cloudflared service install && sudo systemctl enable --now cloudflared
 chmod +x deploy.sh
 
 # Self-hosted (your own VM/VPS) - FULL CONTROL, KVM SUPPORT
-./deploy.sh selfhosted malinfo.yourdomain.gov admin@yourdomain.gov "SecurePass123!"
+./deploy.sh selfhosted malinfo.yourdomaster.gov admin@yourdomaster.gov "SecurePass123!"
 
 # Fly.io - FREE TIER WITH KVM (only free option with dynamic sandbox)
-./deploy.sh fly malinfo.yourdomain.gov
+./deploy.sh fly malinfo.yourdomaster.gov
 
 # Railway - EASIEST, NO KVM (static analysis only)
-./deploy.sh railway malinfo.yourdomain.gov
+./deploy.sh railway malinfo.yourdomaster.gov
 ```
 
 **What the script does automatically:**
@@ -458,7 +495,7 @@ SystemCallErrorNumber=EPERM
 ## 📈 Monitoring & Observability
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/grafana-dashboard.svg" alt="Grafana Dashboard" width="95%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/grafana-dashboard.svg" alt="Grafana Dashboard" width="95%"/>
 </div>
 
 ### Pre-Provisioned Grafana Dashboards
@@ -507,7 +544,7 @@ SystemCallErrorNumber=EPERM
 | `SMTP_USER` | Username (Gmail) | — |
 | `SMTP_PASSWORD` | **App Password** (16-char, not account password) | — |
 | `SMTP_TLS` | Use TLS | `true` |
-| `AGENCY_NOTIFICATION_EMAIL` | Default recipient | `central@malinfo.gov.in` |
+| `AGENCY_NOTIFICATION_EMAIL` | Default recipient | `ary4ntom4r@gmail.com` |
 
 ### 🔌 Optional Integrations
 
@@ -622,7 +659,7 @@ For feature requests, use GitHub Issues with appropriate labels.
 ---
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/main/assets/footer.svg" alt="Footer" width="50%"/>
+  <img src="https://raw.githubusercontent.com/xC0D3F4TH3R/MALINFOx/master/assets/footer.svg" alt="Footer" width="50%"/>
   <br/><br/>
   <b>Built with ❤️ by <a href="https://github.com/xC0D3F4TH3R">xC0D3F4TH3R</a> for National Cyber Defense</b><br/>
   <sub>MALINFO v2.0.0 — Protecting Digital Sovereignty</sub>
